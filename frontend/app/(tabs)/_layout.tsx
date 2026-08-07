@@ -9,14 +9,24 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: '#D50032',
+        tabBarInactiveTintColor: '#6b7280',
         headerStyle: {
           backgroundColor: '#25292e',
         },
         headerShadowVisible: false,
         headerTintColor: '#fff',
         tabBarStyle: {
-          backgroundColor: '#25292e',
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0.5,
+          borderTopColor: '#e5e7eb',
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
         },
       }}
     >
@@ -34,8 +44,15 @@ export default function TabLayout() {
         options={{
           title: 'Events',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar-clear' : 'calendar-clear-outline'} color={color} size={24}/>
+            <Ionicons name={focused ? 'calendar-clear' : 'calendar-clear-outline'} color={color} size={24} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="events-info/[id]"
+        options={{
+          title: 'Event Info',
+          tabBarItemStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
@@ -43,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: 'Check In',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'scan' : 'scan-outline'} color={color} size={24}/>
+            <Ionicons name={focused ? 'scan' : 'scan-outline'} color={color} size={24} />
           ),
         }}
       />
@@ -53,7 +70,7 @@ export default function TabLayout() {
           href: isAdmin ? '/organizer' : null,
           title: 'Organizer',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} color={color} size={24}/>
+            <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} color={color} size={24} />
           ),
         }}
       />
@@ -62,7 +79,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24}/>
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24} />
           ),
         }}
       />
