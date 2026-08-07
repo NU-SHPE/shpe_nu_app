@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
+import { isUicEmail } from '../utils/validation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -8,46 +21,54 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  //$ Fake Backend Login Function
-  const handleLogin = () => {
-    //$ Making Sure Both Fields Are Filled
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    //$ Loading
+    if (!isUicEmail(email)) {
+      Alert.alert('Error', 'Please use your @uic.edu email to sign in.');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false); //$ Loading is done
+    try {
+      await login(email, password);
+    } catch (error: any) {
+      const code = error?.code;
+      let message = 'An unexpected error occurred. Please try again.';
 
-      //$ Check the fake password and email
-      if (email === 'test' && password === 'password') {
-        //$ Success Login
-        Alert.alert('Success', 'Logged in successfully!');
-
-        router.replace('/(tabs)/home'); //$ Navigate to Home Screen
-      } else {
-        //$ Otherwise, show error
-        Alert.alert('Login Failed', 'For testing, use: test / password');
+      if (code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (code === 'auth/user-not-found') {
+        message = 'No account found with this email.';
+      } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        message = 'Incorrect password. Please try again.';
+      } else if (code === 'auth/too-many-requests') {
+        message = 'Too many failed attempts. Please try again later.';
       }
-    }, 1500);
-  };
 
-  // TO DO: Implement create account logic
-  const createAccount = () => {
-    Alert.alert('Create Account', 'Account creation is not implemented in this demo.');
+      Alert.alert('Login Failed', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SHPE App</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Image
-        source={require('../assets/images/shpe_logo.png')} //$ SHPE Logo
+        source={require('../assets/images/shpe_logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
       <Text style={styles.title}>Welcome Back</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -66,6 +87,7 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
+
       <TouchableOpacity
         style={styles.button}
         onPress={handleLogin}
@@ -78,22 +100,18 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
-      {/* TO DO: Handle create account button logic */}
       <TouchableOpacity
-        style={styles.button}
-        onPress={createAccount}
-      // disabled={isLoading}
+        style={styles.registerLink}
+        onPress={() => router.push('/register')}
       >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Create Account</Text>
-        )}
+        <Text style={styles.registerText}>
+          Don't have an account? <Text style={styles.registerBold}>Sign Up</Text>
+        </Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
-//$Styles for the Login Screen
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -135,5 +153,17 @@ const styles = StyleSheet.create({
     height: 150,
     marginBottom: 20,
     alignSelf: 'center',
-  }
+  },
+  registerLink: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  registerText: {
+    color: '#aaa',
+    fontSize: 15,
+  },
+  registerBold: {
+    color: '#D50032',
+    fontWeight: '700',
+  },
 });

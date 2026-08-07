@@ -1,5 +1,3 @@
-// card styling for consitency
-
 import { View, StyleSheet, ViewProps } from 'react-native';
 
 export default function Card({ children, style, ...props }: ViewProps) {

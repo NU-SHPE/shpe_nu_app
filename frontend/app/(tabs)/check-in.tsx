@@ -1,27 +1,100 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Button } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Button, Alert, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera'; //For the QR code to be scanned using cameraview
-import { Alert } from 'react-native';
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function CheckInScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const handleBarCodeScanned = (result: BarcodeScanningResult) => {
-    console.log("QR code scanned!");
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+    };
+  }, []);
+
+  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
+    console.log('QR code scanned!');
     setScanned(true); // Lock the scanner
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const qrCode = result.data;
-    console.log(qrCode);
-    Alert.alert(
-      "Check-in Successful", 
-      `Scanned Data: ${result}`, //Event ID
-      [{ text: "OK", onPress: () => setScanned(false) }]
-    );
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+
+    // On react-native-web, Alert.alert maps to window.alert and ignores button
+    // callbacks — so we also schedule an unconditional reset to prevent the
+    // scanner from being permanently locked after a scan.
+    const resetScan = () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+        resetTimeoutRef.current = null;
+      }
+      setScanned(false);
+    };
+    resetTimeoutRef.current = setTimeout(resetScan, 2500);
+
+    try {
+      if (!user) {
+        Alert.alert('Error', 'You must be signed in to check in.', [
+          { text: 'OK', onPress: resetScan },
+        ]);
+        return;
+      }
+
+      const eventId = result.data?.trim() ?? '';
+      if (!eventId) {
+        Alert.alert('Error', 'Invalid QR code.', [{ text: 'OK', onPress: resetScan }]);
+        return;
+      }
+
+      const eventSnap = await getDoc(doc(db, 'events', eventId));
+      if (!eventSnap.exists()) {
+        Alert.alert('Error', 'Event not found', [{ text: 'OK', onPress: resetScan }]);
+        return;
+      }
+
+      const eventData = eventSnap.data();
+      const eventTitle =
+        typeof eventData?.title === 'string' ? eventData.title : 'Event';
+
+      const checkInRef = doc(db, 'checkIns', `${user.uid}_${eventId}`);
+      const existing = await getDoc(checkInRef);
+      if (existing.exists()) {
+        Alert.alert(
+          'Already Checked In',
+          `You're already checked in to ${eventTitle}.`,
+          [{ text: 'OK', onPress: resetScan }],
+        );
+        return;
+      }
+
+      await setDoc(checkInRef, {
+        userId: user.uid,
+        eventId,
+        timestamp: serverTimestamp(),
+      });
+
+      Alert.alert('Check-in Successful', eventTitle, [
+        { text: 'OK', onPress: resetScan },
+      ]);
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Error', message, [{ text: 'OK', onPress: resetScan }]);
+    }
   };
 
   // Auto-request permission when the screen loads
