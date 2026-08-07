@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { isUicEmail } from '../utils/validation';
+import { isChapterEmail, CHAPTER_EMAIL_LABEL } from '../utils/validation';
 import { SegmentedControl } from '../components/SegmentedControl';
 import {
   SCHOOL_LEVEL_OPTIONS,
@@ -30,7 +30,9 @@ export default function RegisterScreen() {
   const [age, setAge] = useState('');
   const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
   const [gender, setGender] = useState('');
+  const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
+  const [major, setMajor] = useState('');
   const [memberId, setMemberId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,14 +49,18 @@ export default function RegisterScreen() {
       !sexAtBirth ||
       !gender ||
       !schoolLevel ||
+      !major ||
       !memberId
     ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
-    if (!isUicEmail(email)) {
-      Alert.alert('Error', 'Registration is restricted to @uic.edu emails.');
+    if (!isChapterEmail(email)) {
+      Alert.alert(
+        'Error',
+        `Registration is restricted to ${CHAPTER_EMAIL_LABEL} emails.`,
+      );
       return;
     }
 
@@ -81,7 +87,9 @@ export default function RegisterScreen() {
         age: ageNum,
         sexAtBirth,
         gender: gender.trim(),
+        pronouns: pronouns.trim(),
         schoolLevel,
+        major: major.trim(),
         memberId: memberId.trim(),
       });
     } catch (error: any) {
@@ -112,7 +120,7 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join SHPE UIC</Text>
+        <Text style={styles.subtitle}>Join SHPE Northwestern</Text>
 
         <Text style={styles.sectionLabel}>Account</Text>
         <TextInput
@@ -125,7 +133,7 @@ export default function RegisterScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Email (@uic.edu)"
+          placeholder={`Email (${CHAPTER_EMAIL_LABEL})`}
           placeholderTextColor="#888"
           value={email}
           onChangeText={setEmail}
@@ -175,11 +183,28 @@ export default function RegisterScreen() {
           onChangeText={setGender}
         />
 
+        <TextInput
+          style={styles.input}
+          placeholder="Pronouns (optional)"
+          placeholderTextColor="#888"
+          value={pronouns}
+          onChangeText={setPronouns}
+        />
+
         <Text style={styles.fieldLabel}>School level</Text>
         <SegmentedControl
           options={SCHOOL_LEVEL_OPTIONS}
           value={schoolLevel}
           onChange={setSchoolLevel}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Major"
+          placeholderTextColor="#888"
+          value={major}
+          onChangeText={setMajor}
+          autoCapitalize="words"
         />
 
         <TextInput

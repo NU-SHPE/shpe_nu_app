@@ -17,7 +17,10 @@ export interface UserProfileInput {
   age: number;
   sexAtBirth: SexAtBirth;
   gender: string;
+  /** Self-described, optional — stored as '' when not provided. */
+  pronouns: string;
   schoolLevel: SchoolLevel;
+  major: string;
   memberId: string;
 }
 

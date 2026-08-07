@@ -32,7 +32,9 @@ export default function EditProfileScreen() {
   const [age, setAge] = useState('');
   const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
   const [gender, setGender] = useState('');
+  const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
+  const [major, setMajor] = useState('');
   const [memberId, setMemberId] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -42,14 +44,16 @@ export default function EditProfileScreen() {
     setAge(profile.age != null ? String(profile.age) : '');
     setSexAtBirth(profile.sexAtBirth);
     setGender(profile.gender ?? '');
+    setPronouns(profile.pronouns ?? '');
     setSchoolLevel(profile.schoolLevel);
+    setMajor(profile.major ?? '');
     setMemberId(profile.memberId ?? '');
   }, [profile]);
 
   const handleSave = async () => {
     if (!user) return;
 
-    if (!name || !age || !sexAtBirth || !gender || !schoolLevel || !memberId) {
+    if (!name || !age || !sexAtBirth || !gender || !schoolLevel || !major || !memberId) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -67,7 +71,9 @@ export default function EditProfileScreen() {
         age: ageNum,
         sexAtBirth,
         gender: gender.trim(),
+        pronouns: pronouns.trim(),
         schoolLevel,
+        major: major.trim(),
         memberId: memberId.trim(),
       });
       router.back();
@@ -133,11 +139,30 @@ export default function EditProfileScreen() {
             onChangeText={setGender}
           />
 
+          <Text style={styles.fieldLabel}>Pronouns (optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Pronouns"
+            placeholderTextColor="#888"
+            value={pronouns}
+            onChangeText={setPronouns}
+          />
+
           <Text style={styles.fieldLabel}>School level</Text>
           <SegmentedControl
             options={SCHOOL_LEVEL_OPTIONS}
             value={schoolLevel}
             onChange={setSchoolLevel}
+          />
+
+          <Text style={styles.fieldLabel}>Major</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Major"
+            placeholderTextColor="#888"
+            value={major}
+            onChangeText={setMajor}
+            autoCapitalize="words"
           />
 
           <Text style={styles.fieldLabel}>Member ID</Text>

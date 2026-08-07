@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { isUicEmail } from '../utils/validation';
+import { isChapterEmail, CHAPTER_EMAIL_LABEL } from '../utils/validation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -29,8 +29,8 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!isUicEmail(email)) {
-      Alert.alert('Error', 'Please use your @uic.edu email to sign in.');
+    if (!isChapterEmail(email)) {
+      Alert.alert('Error', `Please use your ${CHAPTER_EMAIL_LABEL} email to sign in.`);
       return;
     }
 
