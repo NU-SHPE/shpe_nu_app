@@ -23,7 +23,8 @@ import {
 } from '../types/user';
 
 export default function RegisterScreen() {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,6 +34,7 @@ export default function RegisterScreen() {
   const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [major, setMajor] = useState('');
+  const [minor, setMinor] = useState('');
   const [memberId, setMemberId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +43,8 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (
-      !name ||
+      !firstName ||
+      !lastName ||
       !email ||
       !password ||
       !confirmPassword ||
@@ -49,8 +52,7 @@ export default function RegisterScreen() {
       !sexAtBirth ||
       !gender ||
       !schoolLevel ||
-      !major ||
-      !memberId
+      !major
     ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
@@ -83,13 +85,15 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(email, password, {
-        name: name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         age: ageNum,
         sexAtBirth,
         gender: gender.trim(),
         pronouns: pronouns.trim(),
         schoolLevel,
         major: major.trim(),
+        minor: minor.trim(),
         memberId: memberId.trim(),
       });
     } catch (error: any) {
@@ -125,10 +129,18 @@ export default function RegisterScreen() {
         <Text style={styles.sectionLabel}>Account</Text>
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder="First Name"
           placeholderTextColor="#888"
-          value={name}
-          onChangeText={setName}
+          value={firstName}
+          onChangeText={setFirstName}
+          autoCapitalize="words"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Last Name(s)"
+          placeholderTextColor="#888"
+          value={lastName}
+          onChangeText={setLastName}
           autoCapitalize="words"
         />
         <TextInput
@@ -209,7 +221,16 @@ export default function RegisterScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Member ID"
+          placeholder="Minor (optional)"
+          placeholderTextColor="#888"
+          value={minor}
+          onChangeText={setMinor}
+          autoCapitalize="words"
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Member ID (optional)"
           placeholderTextColor="#888"
           value={memberId}
           onChangeText={setMemberId}

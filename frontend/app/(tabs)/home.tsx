@@ -19,7 +19,7 @@ function ActionButton({ icon, label, onPress } : { icon: any; label: string; onP
 
 export default function Index() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +43,7 @@ export default function Index() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SHPE App</Text>
         <Text style={styles.headerSubtitle}>
-          Welcome back, {user?.email?.split('@')[0] ?? 'Member'}!
+          Welcome back, {profile?.firstName || 'Member'}!
         </Text>
       </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>

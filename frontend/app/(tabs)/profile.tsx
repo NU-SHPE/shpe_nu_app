@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { displayName } from '../../types/user';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -67,7 +68,9 @@ const ProfileScreen = () => {
     { icon: 'calendar-outline', label: 'Age', value: profile?.age != null ? String(profile.age) : '—' },
     { icon: 'male-female-outline', label: 'Sex assigned at birth', value: profile?.sexAtBirth ?? '—' },
     { icon: 'person-outline', label: 'Gender', value: profile?.gender || '—' },
+    { icon: 'chatbubble-ellipses-outline', label: 'Pronouns', value: profile?.pronouns || '—' },
     { icon: 'school-outline', label: 'School level', value: profile?.schoolLevel ?? '—' },
+    { icon: 'book-outline', label: 'Major', value: profile?.major || '—' },
     { icon: 'card-outline', label: 'Member ID', value: profile?.memberId || '—' },
   ];
 
@@ -91,7 +94,7 @@ const ProfileScreen = () => {
                   <Ionicons name="person" size={36} color="#fff" />
                 </View>
               </View>
-              <Text style={styles.userName}>{profile?.name ?? 'Member'}</Text>
+              <Text style={styles.userName}>{displayName(profile) || 'Member'}</Text>
               <Text style={styles.userRole}>{roleLine}</Text>
               <Text style={styles.userEmail}>{user?.email ?? ''}</Text>
               {profile?.isAdmin ? (

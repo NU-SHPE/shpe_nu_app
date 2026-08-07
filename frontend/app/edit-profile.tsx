@@ -28,32 +28,44 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { user, profile } = useAuth();
 
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [age, setAge] = useState('');
   const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
   const [gender, setGender] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [major, setMajor] = useState('');
+  const [minor, setMinor] = useState('');
   const [memberId, setMemberId] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
-    setName(profile.name ?? '');
+    setFirstName(profile.firstName ?? '');
+    setLastName(profile.lastName ?? '');
     setAge(profile.age != null ? String(profile.age) : '');
     setSexAtBirth(profile.sexAtBirth);
     setGender(profile.gender ?? '');
     setPronouns(profile.pronouns ?? '');
     setSchoolLevel(profile.schoolLevel);
     setMajor(profile.major ?? '');
+    setMinor(profile.minor ?? '');
     setMemberId(profile.memberId ?? '');
   }, [profile]);
 
   const handleSave = async () => {
     if (!user) return;
 
-    if (!name || !age || !sexAtBirth || !gender || !schoolLevel || !major || !memberId) {
+    if (
+      !firstName ||
+      !lastName ||
+      !age ||
+      !sexAtBirth ||
+      !gender ||
+      !schoolLevel ||
+      !major
+    ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -67,13 +79,15 @@ export default function EditProfileScreen() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'users', user.uid), {
-        name: name.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         age: ageNum,
         sexAtBirth,
         gender: gender.trim(),
         pronouns: pronouns.trim(),
         schoolLevel,
         major: major.trim(),
+        minor: minor.trim(),
         memberId: memberId.trim(),
       });
       router.back();
@@ -102,13 +116,23 @@ export default function EditProfileScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.fieldLabel}>Full Name</Text>
+          <Text style={styles.fieldLabel}>First Name</Text>
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder="First Name"
             placeholderTextColor="#888"
-            value={name}
-            onChangeText={setName}
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.fieldLabel}>Last Name(s)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Last Name(s)"
+            placeholderTextColor="#888"
+            value={lastName}
+            onChangeText={setLastName}
             autoCapitalize="words"
           />
 
@@ -165,10 +189,20 @@ export default function EditProfileScreen() {
             autoCapitalize="words"
           />
 
+          <Text style={styles.fieldLabel}>Minor</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Minor (optional)"
+            placeholderTextColor="#888"
+            value={minor}
+            onChangeText={setMinor}
+            autoCapitalize="words"
+          />
+
           <Text style={styles.fieldLabel}>Member ID</Text>
           <TextInput
             style={styles.input}
-            placeholder="Member ID"
+            placeholder="Member ID (recommended)"
             placeholderTextColor="#888"
             value={memberId}
             onChangeText={setMemberId}
