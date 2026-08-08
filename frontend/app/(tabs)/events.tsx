@@ -4,6 +4,7 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { PageHeader } from '../../components/PageHeader';
 
 const minicalendarIcon = require('../../assets/images/mini-calendarIcon.png');
 const minilocationIcon = require('../../assets/images/mini-locationIcon.png');
@@ -30,13 +31,9 @@ export default function EventPage() {
 
   return (
     <View style={styles.container}>
+      <PageHeader title="Upcoming Events" />
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.eventList}>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Upcoming Events</Text>
-        </View>
-
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#D40032" />
@@ -84,23 +81,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F2',
   },
 
-  header: {
-    backgroundColor: '#082352',
-    paddingTop: 25,
-    paddingBottom: 25,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  headerText: {
-    color: '#D40032',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-
   eventList: {
+    paddingTop: 20,
     paddingBottom: 40,
   },
 

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
+import { PageHeader } from '../../components/PageHeader';
 
 function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
   return (
@@ -40,12 +41,10 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SHPE App</Text>
-        <Text style={styles.headerSubtitle}>
-          Welcome back, {profile?.firstName || 'Member'}!
-        </Text>
-      </View>
+      <PageHeader
+        title="SHPE App"
+        subtitle={`Welcome back, ${profile?.firstName || 'Member'}!`}
+      />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.actionsRow}>
           <ActionButton icon="calendar-clear" label="View Events" onPress={() => router.push('/events')} />
@@ -81,24 +80,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',
-  },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 56,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-  },
-  headerTitle: {
-    color: '#ff003c',
-    fontSize: 30,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: 15,
-    marginTop: 10,
   },
   scrollView: {
     flex: 1,
