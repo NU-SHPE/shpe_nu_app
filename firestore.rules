@@ -44,8 +44,21 @@ service cloud.firestore {
     // Check-ins: a user can create only their own record and read only their
     // own records. Admins can read all records (for attendance reporting).
     match /checkIns/{id} {
+      // Two ways to prove a check-in is yours:
+      //
+      // 1. The doc ID. check-in.tsx names these `{uid}_{eventId}`, so the
+      //    owner is in the name. This works even when the doc doesn't exist,
+      //    which matters because the client looks for an existing check-in
+      //    before writing one — without it, a member is denied on first scan.
+      // 2. The doc contents, for check-ins saved under some other ID (e.g. an
+      //    organizer marking someone present with an auto-generated ID).
+      //
+      // Neither path reveals whether someone else's check-in exists: a request
+      // for another member's record is denied identically either way.
       allow read: if isSignedIn()
-        && (resource.data.userId == request.auth.uid || isAdmin());
+        && (id.split('_')[0] == request.auth.uid
+            || (resource != null && resource.data.userId == request.auth.uid)
+            || isAdmin());
 
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid;

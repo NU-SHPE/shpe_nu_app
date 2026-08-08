@@ -14,13 +14,18 @@ import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
+/** How long the same QR code is ignored after being handled. */
+const SCAN_COOLDOWN_MS = 5000;
+
 export default function CheckInScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  // Remembers the last code handled, so the same one isn't processed again the
+  // moment the scanner unlocks. Expires on its own — nothing has to release it.
+  const lastScanRef = useRef<{ data: string; at: number } | null>(null);
   useEffect(() => {
     return () => {
       if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
@@ -28,15 +33,31 @@ export default function CheckInScreen() {
   }, []);
 
   const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
-    console.log('QR code scanned!');
-    setScanned(true); // Lock the scanner
+    // Ref, not state: setScanned is async, and the camera fires many times per
+    // second while a code is in frame — enough callbacks slip through before
+    // the re-render to queue a dozen alerts. The ref is checked immediately.
+    const code = result.data?.trim() ?? '';
+    const now = Date.now();
+    if (
+      lastScanRef.current &&
+      lastScanRef.current.data === code &&
+      now - lastScanRef.current.at < SCAN_COOLDOWN_MS
+    ) {
+      return;
+    }
+    lastScanRef.current = { data: code, at: now };
+    setScanned(true); // keeps the camera prop in sync on re-render
+
+
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
 
-    // On react-native-web, Alert.alert maps to window.alert and ignores button
-    // callbacks — so we also schedule an unconditional reset to prevent the
-    // scanner from being permanently locked after a scan.
+    // The timer runs on every platform, not just web. Alert.alert maps to
+    // window.alert on web and ignores button callbacks, and on Android an alert
+    // can be dismissed without onPress firing — so the OK button can never be
+    // the only thing that unlocks the scanner or it wedges shut. The cooldown
+    // above is what stops it re-alerting on the same code once it unlocks.
     const resetScan = () => {
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current);
