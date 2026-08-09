@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, Touchabl
 import Card from '../../../components/Card';
 import { db } from '../../../firebaseConfig';
 import { formatEventDate, formatTimeRange } from '../../../utils/date';
+import { PageHeader } from '../../../components/PageHeader';
 
 const attendanceIcon = require('../../../assets/images/attendanceIcon.png');
 const calendarIcon = require('../../../assets/images/calendarIcon.png');
@@ -41,21 +42,10 @@ export default function EventInfo() {
 
   return (
     <>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/events')}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerSubtitle}>Back to Events!</Text>
-        </View>
-        <Text style={styles.headerTitle}>
-          {loading ? '' : event?.title ?? 'Event not found'}
-        </Text>
-      </View>
+      <PageHeader
+        title={loading ? '' : event?.title ?? 'Event not found'}
+        onBack={() => router.push('/(tabs)/events')}
+      />
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -134,31 +124,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
-  },
-  header: {
-    backgroundColor: '#001E62',
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'column',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: 15,
   },
   header2: {
     fontSize: 18,

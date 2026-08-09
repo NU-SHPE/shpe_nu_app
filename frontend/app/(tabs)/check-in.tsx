@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Button, Alert, Platform } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, Text, View, Button, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera'; //For the QR code to be scanned using cameraview
@@ -13,6 +12,7 @@ import {
 import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
+import { PageHeader } from '../../components/PageHeader';
 
 /** How long the same QR code is ignored after being handled. */
 const SCAN_COOLDOWN_MS = 5000;
@@ -127,16 +127,7 @@ export default function CheckInScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Check In</Text>
-      </View>
+      <PageHeader title="Check In" onBack={() => router.back()} />
 
       <View style={styles.content}>
         <View style={styles.qrCard}>
@@ -185,24 +176,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',
-  },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 32,
-    fontWeight: '800',
   },
   content: {
     flex: 1,

@@ -13,6 +13,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange } from '../../../utils/date';
+import { PageHeader } from '../../../components/PageHeader';
 
 export default function OrganizerQrScreen() {
   const router = useRouter();
@@ -55,12 +56,7 @@ export default function OrganizerQrScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Event QR Code</Text>
-      </View>
+      <PageHeader title="Event QR Code" onBack={() => router.back()} />
 
       <View style={styles.content}>
         {loading ? (
@@ -116,24 +112,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f2f5',
-  },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 26,
-    fontWeight: '800',
   },
   content: {
     flex: 1,

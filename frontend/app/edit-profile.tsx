@@ -12,11 +12,11 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useAuth } from '../contexts/AuthContext';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { PageHeader } from '../components/PageHeader';
 import {
   SCHOOL_LEVEL_OPTIONS,
   SEX_AT_BIRTH_OPTIONS,
@@ -101,12 +101,7 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-      </View>
+      <PageHeader title="Edit Profile" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -230,24 +225,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#25292e',
-  },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 28,
-    fontWeight: '800',
   },
   scrollContent: {
     padding: 20,
