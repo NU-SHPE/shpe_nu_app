@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -12,5 +14,23 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+/**
+ * Without explicit persistence, Firebase Auth on React Native keeps session
+ * state in memory only — members would sign in again on every launch.
+ *
+ * getReactNativePersistence exists only on Firebase's react-native entry point.
+ * Metro resolves that on phones, but TypeScript and the web bundle both see the
+ * browser build, where the symbol isn't there — so it's resolved with require()
+ * inside the native branch rather than imported at the top. Browsers already
+ * persist to localStorage, so getAuth is the right call there anyway.
+ */
+const nativePersistence = (): Persistence =>
+  require('firebase/auth').getReactNativePersistence(AsyncStorage);
+
+export const auth: Auth =
+  Platform.OS === 'web'
+    ? getAuth(app)
+    : initializeAuth(app, { persistence: nativePersistence() });
+
 export const db = getFirestore(app);
