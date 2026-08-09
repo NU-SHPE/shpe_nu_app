@@ -38,6 +38,7 @@ function AuthGate() {
       <Stack.Screen name="register" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="organizer/qr/[eventId]" />
+      <Stack.Screen name="organizer/create-event" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

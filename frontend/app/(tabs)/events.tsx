@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
 import { PageHeader } from '../../components/PageHeader';
+import { formatEventDate, formatTimeRange } from '../../utils/date';
 
 const minicalendarIcon = require('../../assets/images/mini-calendarIcon.png');
 const minilocationIcon = require('../../assets/images/mini-locationIcon.png');
@@ -15,18 +16,18 @@ export default function EventPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const q = query(collection(db, 'events'), orderBy('date', 'asc'));
-        const snapshot = await getDocs(q);
-        setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      } finally {
+    const q = query(collection(db, 'events'), orderBy('startsAt', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        setEvents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
         setLoading(false);
-      }
-    };
-    fetchEvents();
+      },
+      (error) => {
+        console.error('Error loading events:', error);
+        setLoading(false);
+      },
+    );
   }, []);
 
   return (
@@ -42,8 +43,7 @@ export default function EventPage() {
           <Text style={[styles.desc, { marginHorizontal: 20 }]}>No upcoming events.</Text>
         ) : (
           events.map((ev) => {
-            const timeParts = [ev.startTime, ev.endTime].filter(Boolean);
-            const timeStr = timeParts.length > 0 ? timeParts.join(' – ') : '';
+            const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
             return (
               <TouchableOpacity
                 key={ev.id}
@@ -57,7 +57,7 @@ export default function EventPage() {
                 <View style={styles.iconRow}>
                   <Image source={minicalendarIcon} style={styles.smallIcon} />
                   <Text style={styles.info}>
-                    {ev.date ?? ''}{timeStr ? ` · ${timeStr}` : ''}
+                    {formatEventDate(ev.startsAt)}{timeStr ? ` · ${timeStr}` : ''}
                   </Text>
                 </View>
                 <View style={styles.iconRow}>

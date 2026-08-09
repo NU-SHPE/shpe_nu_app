@@ -22,7 +22,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "name":"SHPE App",
+      "name": "SHPE App",
       "shortName": "SHPE",
       "output": "static",
       "favicon": "./assets/images/UIC-SHPE-Webapp.png"
@@ -46,7 +46,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

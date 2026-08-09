@@ -12,6 +12,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import QRCode from 'react-native-qrcode-svg';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
+import { formatEventDate, formatTimeRange } from '../../../utils/date';
 
 export default function OrganizerQrScreen() {
   const router = useRouter();
@@ -78,11 +79,12 @@ export default function OrganizerQrScreen() {
             </View>
 
             <Text style={styles.eventTitle}>{event.title ?? 'Event'}</Text>
-            {event.date ? (
+            {event.startsAt ? (
               <Text style={styles.eventMeta}>
-                {event.date}
-                {event.startTime ? ` · ${event.startTime}` : ''}
-                {event.endTime ? ` – ${event.endTime}` : ''}
+                {formatEventDate(event.startsAt)}
+                {formatTimeRange(event.startsAt, event.endsAt)
+                  ? ` · ${formatTimeRange(event.startsAt, event.endsAt)}`
+                  : ''}
               </Text>
             ) : null}
             {event.location ? (

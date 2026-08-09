@@ -9,9 +9,13 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
+import { PageHeader } from '../../components/PageHeader';
+import { ActionButton } from '../../components/ActionButton';
+import { categoryLabel } from '../../types/event';
+import { formatEventDate, formatTimeRange } from '../../utils/date';
 
 export default function OrganizerScreen() {
   const router = useRouter();
@@ -19,19 +23,22 @@ export default function OrganizerScreen() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // onSnapshot, not getDocs: a one-time fetch leaves this list showing whatever
+  // existed when the tab first mounted. Tabs stay mounted, so creating an event
+  // and coming back wouldn't show it.
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const q = query(collection(db, 'events'), orderBy('date', 'asc'));
-        const snapshot = await getDocs(q);
+    const q = query(collection(db, 'events'), orderBy('startsAt', 'asc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
         setEvents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      } finally {
         setLoading(false);
-      }
-    };
-    fetchEvents();
+      },
+      (error) => {
+        console.error('Error loading events:', error);
+        setLoading(false);
+      },
+    );
   }, []);
 
   if (!profileLoading && profile && profile.isAdmin !== true) {
@@ -48,14 +55,24 @@ export default function OrganizerScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Organizer</Text>
-        <Text style={styles.headerSubtitle}>
-          Tap an event to display its check-in QR code
-        </Text>
-      </View>
+      <PageHeader
+        title="Organizer"
+        subtitle="Tap an event to display its check-in QR code"
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.actionsRow}>
+          <ActionButton
+            icon="add-circle"
+            label="Create Event"
+            onPress={() => router.push('/organizer/create-event')}
+          />
+          {/* Post Announcement goes here next. */}
+          <View style={styles.actionSpacer} />
+        </View>
+
+        <Text style={styles.sectionTitle}>Your Events</Text>
+
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#D50032" />
@@ -64,8 +81,8 @@ export default function OrganizerScreen() {
           <Text style={styles.emptyText}>No events yet.</Text>
         ) : (
           events.map((ev) => {
-            const timeParts = [ev.startTime, ev.endTime].filter(Boolean);
-            const timeStr = timeParts.length > 0 ? ` · ${timeParts.join(' – ')}` : '';
+            const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
+            const category = categoryLabel(ev.category);
             return (
               <TouchableOpacity
                 key={ev.id}
@@ -75,10 +92,12 @@ export default function OrganizerScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
                   <Text style={styles.cardInfo}>
-                    {ev.date ?? ''}
-                    {timeStr}
+                    {formatEventDate(ev.startsAt)}
+                    {timeStr ? ` · ${timeStr}` : ''}
                   </Text>
-                  <Text style={styles.cardLocation}>{ev.location ?? ''}</Text>
+                  <Text style={styles.cardLocation}>
+                    {[ev.location, category].filter(Boolean).join(' · ')}
+                  </Text>
                 </View>
                 <View style={styles.qrButton}>
                   <Ionicons name="qr-code" size={22} color="#fff" />
@@ -97,23 +116,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f2f5',
   },
-  header: {
-    backgroundColor: '#1B2A6B',
-    paddingTop: 56,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
+  actionsRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
   },
-  headerTitle: {
-    color: '#D50032',
-    fontSize: 30,
-    fontWeight: '800',
+  actionSpacer: {
+    flex: 1,
+    marginHorizontal: 4,
   },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: 14,
-    marginTop: 6,
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1B2A6B',
+    marginTop: 8,
   },
   scrollContent: {
     padding: 16,

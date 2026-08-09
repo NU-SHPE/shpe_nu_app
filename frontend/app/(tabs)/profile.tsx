@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import {
   collection,
-  getDocs,
+  onSnapshot,
   query,
   where,
 } from 'firebase/firestore';
@@ -36,19 +36,15 @@ const ProfileScreen = () => {
       return;
     }
 
-    const fetchCheckIns = async () => {
-      try {
-        const checkInsQuery = query(
-          collection(db, 'checkIns'),
-          where('userId', '==', user.uid),
-        );
-        const snapshot = await getDocs(checkInsQuery);
-        setEventsAttended(snapshot.size);
-      } catch (error) {
-        console.error('Error fetching check-ins:', error);
-      }
-    };
-    fetchCheckIns();
+    const checkInsQuery = query(
+      collection(db, 'checkIns'),
+      where('userId', '==', user.uid),
+    );
+    return onSnapshot(
+      checkInsQuery,
+      (snapshot) => setEventsAttended(snapshot.size),
+      (error) => console.error('Error loading check-ins:', error),
+    );
   }, [user]);
 
   const handleSignOut = async () => {

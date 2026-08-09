@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
 import { db } from '../../../firebaseConfig';
+import { formatEventDate, formatTimeRange } from '../../../utils/date';
 
 const attendanceIcon = require('../../../assets/images/attendanceIcon.png');
 const calendarIcon = require('../../../assets/images/calendarIcon.png');
@@ -36,8 +37,7 @@ export default function EventInfo() {
     fetchEvent();
   }, [id]);
 
-  const timeParts = [event?.startTime, event?.endTime].filter(Boolean);
-  const timeStr = timeParts.length > 0 ? timeParts.join(' – ') : '';
+  const timeStr = formatTimeRange(event?.startsAt, event?.endsAt);
 
   return (
     <>
@@ -72,7 +72,9 @@ export default function EventInfo() {
               <Image source={calendarIcon} style={styles.medIcon} />
               <Text style={styles.meta}>Date & Time</Text>
             </View>
-            <Text style={[styles.meta, styles.marginLeft]}>{event.date ?? ''}</Text>
+            <Text style={[styles.meta, styles.marginLeft]}>
+              {formatEventDate(event.startsAt)}
+            </Text>
             {timeStr ? (
               <Text style={[styles.meta, styles.marginLeft]}>{timeStr}</Text>
             ) : null}
