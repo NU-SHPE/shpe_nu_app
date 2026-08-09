@@ -13,6 +13,8 @@ import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
+import { isCheckInOpen, isCheckOutOpen } from '@/utils/scanWindow';
+import { parseQRPayload } from '@/utils/qrPayload';
 
 /** How long the same QR code is ignored after being handled. */
 const SCAN_COOLDOWN_MS = 5000;
@@ -75,11 +77,12 @@ export default function CheckInScreen() {
         return;
       }
 
-      const eventId = result.data?.trim() ?? '';
-      if (!eventId) {
+      const parsed = parseQRPayload(result.data);
+      if (!parsed) {
         Alert.alert('Error', 'Invalid QR code.', [{ text: 'OK', onPress: resetScan }]);
         return;
       }
+      const { eventId, mode } = parsed;
 
       const eventSnap = await getDoc(doc(db, 'events', eventId));
       if (!eventSnap.exists()) {
@@ -88,29 +91,80 @@ export default function CheckInScreen() {
       }
 
       const eventData = eventSnap.data();
+      // only allows check-ins during the check-in window.
+      const now = new Date();
+      const windowOpen = mode === 'out' ? isCheckOutOpen(eventData, now) : isCheckInOpen(eventData, now);
+      if (!windowOpen) {
+        Alert.alert(
+          mode === 'out' ? 'Check-out closed' : 'Check-in closed',
+          mode === 'out'
+            ? "Check-out isn't open for this event yet."
+            : "Check-in isn't open for this event right now.",
+          [{ text: 'OK', onPress: resetScan }]
+        );
+        return;
+      }
+
       const eventTitle =
         typeof eventData?.title === 'string' ? eventData.title : 'Event';
 
       const checkInRef = doc(db, 'checkIns', `${user.uid}_${eventId}`);
       const existing = await getDoc(checkInRef);
-      if (existing.exists()) {
-        Alert.alert(
-          'Already Checked In',
-          `You're already checked in to ${eventTitle}.`,
-          [{ text: 'OK', onPress: resetScan }],
+      const existingData = existing.data();
+
+      if (mode === 'in') {
+        if (existingData?.checkedInAt) {
+          Alert.alert(
+            'Already Checked In',
+            `You're already checked in to ${eventTitle}.`,
+            [{ text: 'OK', onPress: resetScan }],
+          );
+          return;
+        }
+
+
+        await setDoc(checkInRef,
+          {
+            userId: user.uid,
+            eventId,
+            checkedInAt: serverTimestamp(),
+            pointsAwarded: eventData?.checkInPoints ?? 0,
+          },
+          {
+            merge: true,
+          }
         );
-        return;
+
+        Alert.alert('Check-in Successful', eventTitle, [
+          { text: 'OK', onPress: resetScan },
+        ]);
+      } else {
+        if (existingData?.checkedOutAt) {
+          Alert.alert(
+            'Already Checked Out',
+            `You're already checked out of ${eventTitle}.`,
+            [{ text: 'OK', onPress: resetScan }]
+          );
+          return;
+        }
+
+        await setDoc(checkInRef,
+          {
+            userId: user.uid,
+            eventId,
+            checkedOutAt: serverTimestamp(),
+            checkOutPointsAwarded: eventData?.checkOutPoints ?? 0,
+          },
+          {
+            merge: true,
+          }
+        );
+
+        Alert.alert('Check-out Successful', eventTitle, [
+          { text: 'OK', onPress: resetScan },
+        ]);
       }
 
-      await setDoc(checkInRef, {
-        userId: user.uid,
-        eventId,
-        timestamp: serverTimestamp(),
-      });
-
-      Alert.alert('Check-in Successful', eventTitle, [
-        { text: 'OK', onPress: resetScan },
-      ]);
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : 'Something went wrong';
@@ -123,7 +177,7 @@ export default function CheckInScreen() {
     if (!permission) requestPermission();
   }, []);
 
-  
+
 
   return (
     <View style={styles.container}>
@@ -143,8 +197,8 @@ export default function CheckInScreen() {
           </View> */}
           <View style={styles.scannerFrame}>
             {permission?.granted ? (
-              <CameraView 
-                style={StyleSheet.absoluteFillObject} 
+              <CameraView
+                style={StyleSheet.absoluteFillObject}
                 facing="back"
                 onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                 barcodeScannerSettings={{
@@ -163,7 +217,7 @@ export default function CheckInScreen() {
           </Text>
         </View>
 
-        
+
         <Text style={styles.footerText}>
           No QR code? <Text style={styles.linkText}>Ask an organizer for assistance</Text>
         </Text>
@@ -231,7 +285,7 @@ const styles = StyleSheet.create({
   topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
   bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
   bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-  
+
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',

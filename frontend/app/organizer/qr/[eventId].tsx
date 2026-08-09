@@ -14,10 +14,12 @@ import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
+import { buildQRPayload } from '@/utils/qrPayload';
 
 export default function OrganizerQrScreen() {
   const router = useRouter();
-  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  const { eventId, mode } = useLocalSearchParams<{ eventId: string, mode: string }>();
+  const qrMode = mode === 'out' ? 'out' : 'in';
   const { profile, profileLoading } = useAuth();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,10 @@ export default function OrganizerQrScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title="Event QR Code" onBack={() => router.back()} />
+      <PageHeader 
+        title={qrMode === 'out' ? "Check-Out QR Code" : "Check-In QR Code"}
+        onBack={() => router.back()} 
+      />
 
       <View style={styles.content}>
         {loading ? (
@@ -67,14 +72,14 @@ export default function OrganizerQrScreen() {
           <>
             <View style={styles.qrCard}>
               <QRCode
-                value={String(eventId)}
+                value={buildQRPayload(String(eventId), qrMode)}
                 size={260}
                 color="#1B2A6B"
                 backgroundColor="#fff"
               />
             </View>
 
-            <Text style={styles.eventTitle}>{event.title ?? 'Event'}</Text>
+            <Text style={styles.eventTitle}>{qrMode === 'out' ? `${event.title} Check-Out` : `${event.title} Check-In`}</Text>
             {event.startsAt ? (
               <Text style={styles.eventMeta}>
                 {formatEventDate(event.startsAt)}
@@ -88,14 +93,18 @@ export default function OrganizerQrScreen() {
             ) : null}
 
             <View style={styles.codeBox}>
-              <Text style={styles.codeLabel}>Event ID (manual entry fallback)</Text>
+              <Text style={styles.codeLabel}>
+                {qrMode === 'out' ? 'Check-out code' : 'Check-in code'}
+              </Text>
               <Text selectable style={styles.codeValue}>
-                {String(eventId)}
+                {buildQRPayload(String(eventId), qrMode)}
               </Text>
             </View>
 
             <Text style={styles.instructions}>
-              Members can scan this code from the Check In tab to record attendance.
+              {qrMode === 'out'
+                ? 'Show this as the event wraps up. Members scan it from the Check In tab to check out.'
+                : 'Show this as the event starts. Members scan it from the Check In tab to check in.'}
             </Text>
           </>
         )}

@@ -15,8 +15,8 @@ import type { Timestamp, FieldValue } from 'firebase/firestore';
 export const EVENT_CATEGORIES = {
   generalMeeting: {
     label: 'General Meeting',
-    checkInPoints: 1,
-    checkOutPoints: 2,
+    checkInPoints: 1.5,
+    checkOutPoints: 1.5,
   },
   social: {
     label: 'Social / Collaboration',
@@ -30,8 +30,8 @@ export const EVENT_CATEGORIES = {
   },
   professional: {
     label: 'Professional',
-    checkInPoints: 1,
-    checkOutPoints: 2,
+    checkInPoints: 1.5,
+    checkOutPoints: 1.5,
   },
   regional: {
     label: 'Regional',

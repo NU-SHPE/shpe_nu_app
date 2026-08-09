@@ -22,17 +22,12 @@ import {
   EVENT_CATEGORY_KEYS,
   type EventCategory,
 } from '../../types/event';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { parseDateTime, toDateInput, toTimeInput } from '../../utils/date';
-
-/**
- * The community picker has no usable web build, so the browser keeps plain text
- * inputs. Officers create events on their phones, which is where the native
- * date and time wheels matter.
- */
-const USE_NATIVE_PICKER = Platform.OS !== 'web';
+import { DateSelect } from '../../components/DateSelect';
+import { TimeSelect, formatTimeLabel } from '../../components/TimeSelect';
+import { formatEventDate, parseDateTime } from '../../utils/date';
 
 type PickerTarget = 'date' | 'start' | 'end';
+type FieldErrors = Partial<Record<'title' | 'category' | 'date' | 'time' | 'location', string>>;
 
 export default function CreateEventScreen() {
   const router = useRouter();
@@ -47,21 +42,28 @@ export default function CreateEventScreen() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [picker, setPicker] = useState<PickerTarget | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
-  /** Seeds the picker with whatever's already chosen, else a sensible default. */
-  const pickerValue = (target: PickerTarget): Date => {
-    if (target === 'date') return parseDateTime(date, '12:00') ?? new Date();
-    const time = target === 'start' ? startTime : endTime;
-    return parseDateTime(date || toDateInput(new Date()), time) ?? new Date();
-  };
+  /**
+   * Errors land under the field they belong to rather than in one alert, so
+   * "which field is wrong and why" doesn't have to be guessed.
+   */
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    if (!title.trim()) next.title = 'Give the event a name.';
+    if (!category) next.category = 'Pick a category.';
+    if (!date) next.date = 'Pick a date.';
+    if (!location.trim()) next.location = 'Where is it happening?';
 
-  const handlePicked = (_event: unknown, selected?: Date) => {
-    const target = picker;
-    setPicker(null); // Android dismisses the dialog once a value is chosen
-    if (!selected || !target) return;
-    if (target === 'date') setDate(toDateInput(selected));
-    else if (target === 'start') setStartTime(toTimeInput(selected));
-    else setEndTime(toTimeInput(selected));
+    if (!startTime || !endTime) {
+      next.time = 'Pick a start and end time.';
+    } else if (date) {
+      const startsAt = parseDateTime(date, startTime);
+      const endsAt = parseDateTime(date, endTime);
+      if (!startsAt || !endsAt) next.time = 'That time looks wrong.';
+      else if (endsAt <= startsAt) next.time = 'The end time has to be after the start.';
+    }
+    return next;
   };
 
   if (!profileLoading && profile && profile.isAdmin !== true) {
@@ -76,28 +78,14 @@ export default function CreateEventScreen() {
   const handleCreate = async () => {
     if (!user) return;
 
-    if (!title || !category || !date || !startTime || !endTime || !location) {
-      Alert.alert('Error', 'Please fill in every field except description.');
-      return;
-    }
+    const found = validate();
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
 
-    const startsAt = parseDateTime(date, startTime);
-    const endsAt = parseDateTime(date, endTime);
-
-    if (!startsAt) {
-      Alert.alert('Error', 'Check the date and start time. Use YYYY-MM-DD and HH:MM.');
-      return;
-    }
-    if (!endsAt) {
-      Alert.alert('Error', 'Check the end time. Use HH:MM in 24-hour format.');
-      return;
-    }
-    if (endsAt <= startsAt) {
-      Alert.alert('Error', 'The end time has to be after the start time.');
-      return;
-    }
-
-    const points = EVENT_CATEGORIES[category];
+    // validate() guarantees these are set and parseable.
+    const startsAt = parseDateTime(date, startTime)!;
+    const endsAt = parseDateTime(date, endTime)!;
+    const points = EVENT_CATEGORIES[category!];
 
     setSaving(true);
     try {
@@ -142,6 +130,7 @@ export default function CreateEventScreen() {
             value={title}
             onChangeText={setTitle}
           />
+          {errors.title ? <Text style={styles.errorText}>{errors.title}</Text> : null}
 
           <Text style={styles.fieldLabel}>Category</Text>
           <View style={styles.chipRow}>
@@ -160,6 +149,7 @@ export default function CreateEventScreen() {
               );
             })}
           </View>
+          {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
 
           {selected ? (
             <Text style={styles.pointsNote}>
@@ -172,69 +162,53 @@ export default function CreateEventScreen() {
           ) : null}
 
           <Text style={styles.fieldLabel}>Date</Text>
-          {USE_NATIVE_PICKER ? (
-            <TouchableOpacity style={styles.input} onPress={() => setPicker('date')}>
-              <Text style={date ? styles.inputValue : styles.inputPlaceholder}>
-                {date || 'Pick a date'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textFaint}
-              value={date}
-              onChangeText={setDate}
-              autoCapitalize="none"
-            />
-          )}
+          <TouchableOpacity style={styles.input} onPress={() => setPicker('date')}>
+            <Text style={date ? styles.inputValue : styles.inputPlaceholder}>
+              {date ? formatEventDate(new Date(`${date}T00:00:00`)) : 'Pick a date'}
+            </Text>
+          </TouchableOpacity>
+          {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
 
           <View style={styles.row}>
             <View style={styles.rowItem}>
               <Text style={styles.fieldLabel}>Starts</Text>
-              {USE_NATIVE_PICKER ? (
-                <TouchableOpacity style={styles.input} onPress={() => setPicker('start')}>
-                  <Text style={startTime ? styles.inputValue : styles.inputPlaceholder}>
-                    {startTime || 'Pick a time'}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="18:00"
-                  placeholderTextColor={colors.textFaint}
-                  value={startTime}
-                  onChangeText={setStartTime}
-                />
-              )}
+              <TouchableOpacity style={styles.input} onPress={() => setPicker('start')}>
+                <Text style={startTime ? styles.inputValue : styles.inputPlaceholder}>
+                  {startTime ? formatTimeLabel(startTime) : 'Pick a time'}
+                </Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.rowItem}>
               <Text style={styles.fieldLabel}>Ends</Text>
-              {USE_NATIVE_PICKER ? (
-                <TouchableOpacity style={styles.input} onPress={() => setPicker('end')}>
-                  <Text style={endTime ? styles.inputValue : styles.inputPlaceholder}>
-                    {endTime || 'Pick a time'}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="19:00"
-                  placeholderTextColor={colors.textFaint}
-                  value={endTime}
-                  onChangeText={setEndTime}
-                />
-              )}
+              <TouchableOpacity style={styles.input} onPress={() => setPicker('end')}>
+                <Text style={endTime ? styles.inputValue : styles.inputPlaceholder}>
+                  {endTime ? formatTimeLabel(endTime) : 'Pick a time'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
+          {errors.time ? <Text style={styles.errorText}>{errors.time}</Text> : null}
 
-          {picker ? (
-            <DateTimePicker
-              value={pickerValue(picker)}
-              mode={picker === 'date' ? 'date' : 'time'}
-              onChange={handlePicked}
-            />
-          ) : null}
+          <DateSelect
+            visible={picker === 'date'}
+            value={date}
+            onSelect={setDate}
+            onClose={() => setPicker(null)}
+          />
+          <TimeSelect
+            visible={picker === 'start'}
+            value={startTime}
+            title="Start time"
+            onSelect={setStartTime}
+            onClose={() => setPicker(null)}
+          />
+          <TimeSelect
+            visible={picker === 'end'}
+            value={endTime}
+            title="End time"
+            onSelect={setEndTime}
+            onClose={() => setPicker(null)}
+          />
 
           <Text style={styles.fieldLabel}>Location</Text>
           <TextInput
@@ -244,6 +218,7 @@ export default function CreateEventScreen() {
             value={location}
             onChangeText={setLocation}
           />
+          {errors.location ? <Text style={styles.errorText}>{errors.location}</Text> : null}
 
           <Text style={styles.fieldLabel}>Description (optional)</Text>
           <TextInput
@@ -349,6 +324,11 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: {
     color: colors.onNavy,
+  },
+  errorText: {
+    color: colors.red,
+    fontSize: fontSize.label,
+    marginTop: spacing.xs,
   },
   pointsNote: {
     marginTop: spacing.sm,

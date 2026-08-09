@@ -171,6 +171,16 @@ Windows / PowerShell:
   secretary run points analysis, or exec create events. Needs an admin-facing
   users screen to manage them.
 - **Points / membership page** with analysis tools for officers.
+- **Completion bonus.** Points are split evenly between check-in and check-out,
+  so partial attendance earns half. An even split can't distinguish leaving
+  early from arriving late — weighting either half rewards the other behavior.
+  The fix is equal halves plus a bonus for having both, which makes full
+  attendance worth meaningfully more than either half. Deferred; it needs a
+  `completionBonus` field on events and the second scan to award it.
+- **Whether exec should earn points at their own events.** Easier for them to
+  collect the completion bonus at an event they're running. Policy question, not
+  a technical one — events already store `createdBy`, so it's enforceable
+  whenever the chapter decides.
 - **Announcements**, with push notifications.
 - **Birthday instead of age.** Store a date so age updates itself rather than
   going stale the moment someone has a birthday.

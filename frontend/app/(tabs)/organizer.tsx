@@ -57,7 +57,7 @@ export default function OrganizerScreen() {
     <View style={styles.container}>
       <PageHeader
         title="Organizer"
-        subtitle="Tap an event to display its check-in QR code"
+        subtitle="Show the check-in code when an event starts, check-out when it ends"
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -84,11 +84,7 @@ export default function OrganizerScreen() {
             const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
             const category = categoryLabel(ev.category);
             return (
-              <TouchableOpacity
-                key={ev.id}
-                style={styles.card}
-                onPress={() => router.push(`/organizer/qr/${ev.id}`)}
-              >
+              <View key={ev.id} style={styles.card}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
                   <Text style={styles.cardInfo}>
@@ -99,10 +95,24 @@ export default function OrganizerScreen() {
                     {[ev.location, category].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
-                <View style={styles.qrButton}>
-                  <Ionicons name="qr-code" size={22} color="#fff" />
+                <View style={styles.qrButtonRow}>
+                  <TouchableOpacity
+                    style={styles.qrButton}
+                    onPress={() => router.push(`/organizer/qr/${ev.id}`)}
+                  >
+                    <Ionicons name="log-in" size={22} color="#fff" />
+                  </TouchableOpacity>
+
+                  {ev.checkOutPoints > 0 ? (
+                    <TouchableOpacity
+                      style={[styles.qrButton, styles.qrButtonOut]}
+                      onPress={() => router.push(`/organizer/qr/${ev.id}?mode=out`)}
+                    >
+                      <Ionicons name="log-out" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
-              </TouchableOpacity>
+              </View>
             );
           })
         )}
@@ -172,6 +182,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
   },
+  qrButtonRow: {
+    flexDirection: 'column',
+    gap: 8,
+  },
   qrButton: {
     width: 44,
     height: 44,
@@ -180,6 +194,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  // Only overrides the colour — size and shape come from qrButton underneath.
+  qrButtonOut: {
+    backgroundColor: '#1B2A6B',
   },
   noAccessTitle: {
     fontSize: 18,
