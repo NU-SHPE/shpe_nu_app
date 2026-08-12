@@ -36,8 +36,6 @@ firebase deploy --only firestore:rules
   becomes a route, so shared components belong in `frontend/components/`.
 - **Firebase** is the entire backend: Auth for credentials, Firestore for data.
   There is no server to run.
-- `backend/server.js` and the root `package.json` are **dead** — leftovers from
-  an abandoned Express/Mongoose approach. Safe to delete.
 - Auth state flows through `frontend/contexts/AuthContext.tsx`, which exposes
   `user` (Firebase Auth) and `profile` (the Firestore `users` doc).
 
