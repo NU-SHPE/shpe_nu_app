@@ -30,10 +30,12 @@ const ProfileScreen = () => {
   const { user, profile, profileLoading, logout } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [eventsAttended, setEventsAttended] = useState(0);
+  const [points, setPoints] = useState(0);
 
   useEffect(() => {
     if (!user) {
       setEventsAttended(0);
+      setPoints(0);
       return;
     }
 
@@ -43,8 +45,16 @@ const ProfileScreen = () => {
     );
     return onSnapshot(
       checkInsQuery,
-      (snapshot) => setEventsAttended(snapshot.size),
-      (error) => console.error('Error loading check-ins:', error),
+      (snapshot) => { 
+        setEventsAttended(snapshot.size);
+        setPoints(
+          snapshot.docs.reduce((sum, d) => {
+            const data = d.data();
+            return sum + (data.pointsAwarded ?? 0) + (data.checkOutPointsAwarded ?? 0);
+        }, 0),
+      );
+    },
+    (error) => console.error('Error loading check-ins:', error),
     );
   }, [user]);
 
@@ -122,7 +132,7 @@ const ProfileScreen = () => {
             <View style={styles.statIconContainer}>
               <Ionicons name="trophy" size={20} color={RED} />
             </View>
-            <Text style={styles.statNumber}>{eventsAttended * 20}</Text>
+            <Text style={styles.statNumber}>{points}</Text>
             <Text style={styles.statLabel}>Points{'\n'}Earned</Text>
           </View>
         </View>

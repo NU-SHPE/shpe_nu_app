@@ -46,8 +46,12 @@ firebase deploy --only firestore:rules
 | `components/theme.ts` | colors, spacing, radius, font sizes |
 | `components/PageHeader.tsx` | the navy banner on every screen |
 | `components/ActionButton.tsx` | icon-in-a-red-circle action cards |
+| `components/DateSelect.tsx` | month-grid calendar picker |
+| `components/TimeSelect.tsx` | 15-minute time list |
 | `types/event.ts` | event categories and their point values |
 | `utils/date.ts` | timestamp formatting and form parsing |
+| `utils/qrPayload.ts` | check-in vs check-out QR payloads |
+| `utils/scanWindow.ts` | when each code is valid |
 | `utils/validation.ts` | chapter email domains |
 
 ## Firebase
@@ -72,13 +76,37 @@ Collections are created implicitly on first write. No schema, no SQL.
 
 ```
 events         title, description, location, category, checkInPoints,
-               checkOutPoints, checkOutOpen, startsAt, endsAt, createdAt,
-               createdBy
-users          firstName, lastName, age, sexAtBirth, gender, pronouns,
+               checkOutPoints, startsAt, endsAt, createdAt, createdBy
+users          firstName, lastName, birthday, sexAtBirth, gender, pronouns,
                schoolLevel, major, minor, memberId, email, isAdmin, createdAt
-checkIns       userId, eventId, timestamp
+checkIns       userId, eventId, checkedInAt, pointsAwarded,
+               checkedOutAt?, checkOutPointsAwarded?
 announcements  title, body, time, createdAt
 ```
+
+### Check-in / check-out
+
+One `checkIns` document per member per event, holding both halves. Each scan
+fills in its own half with `setDoc(..., { merge: true })`, so **either half can
+come first** — someone who arrives too late to check in can still check out.
+Branch on the fields (`checkedInAt`, `checkedOutAt`), not on whether the
+document exists.
+
+Two QR codes per event, distinguished by payload: `eventId` for check-in,
+`eventId:out` for check-out. See `utils/qrPayload.ts`. The code declares the
+intent, so no server-side "which mode are we in" state is needed.
+
+Scan windows, in `utils/scanWindow.ts`:
+
+- **Check-in** — from 30 minutes before `startsAt` until the event's midpoint
+- **Check-out** — from the midpoint until 30 minutes after `endsAt`
+
+Both computed from the event document at scan time, so editing an event's times
+moves the windows immediately. They don't overlap, which is deliberate.
+
+Points are **copied onto the check-in document** rather than looked up later, so
+changing a category's values next year doesn't silently rewrite past records.
+The rules verify the copied values against the event.
 
 ### Event categories
 
@@ -86,14 +114,14 @@ Point values live in `types/event.ts` and are **never typed by hand** — office
 pick a category and points follow. Category *keys* are stored on documents;
 *labels* are display-only, so renaming a label is free.
 
-| Category | Check-in | Check-out |
-|---|---|---|
-| General meeting | 1 | 2 |
-| Social / collaboration | 1 | 1 |
-| Study Table | 1 | 1 |
-| Professional | 1 | 2 |
-| Regional | 4 | — |
-| Community service | 5 | — |
+| Category | Check-in | Check-out | Total |
+|---|---|---|---|
+| General meeting | 1.5 | 1.5 | 3 |
+| Social / collaboration | 1 | 1 | 2 |
+| Study Table | 1 | 1 | 2 |
+| Professional | 1.5 | 1.5 | 3 |
+| Regional | 4 | — | 4 |
+| Community service | 5 | — | 5 |
 
 Regional and community service have no check-out: showing up is the effort, so
 the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
@@ -108,6 +136,10 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   appearing on the organizer screen.
 - `isAdmin` can only be granted by editing the user doc in the Firebase console.
   `firestore.rules` deliberately blocks users from changing their own.
+- **Auth persistence needs an odd import.** `getReactNativePersistence` ships
+  only on Firebase's react-native entry point, which Metro resolves but tsc and
+  the web bundle don't. `firebaseConfig.ts` pulls it in with `require()` inside
+  the native branch for that reason — a top-level import breaks both.
 - **Check-in rules key off the document ID.** `checkIns` docs are named
   `{uid}_{eventId}`, and the read rule parses the owner out of that name so it
   works even when the doc doesn't exist yet. If anything ever writes a check-in
@@ -128,8 +160,14 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
 - Names are `firstName` + `lastName`. **Last name is free text and may hold
   multiple surnames** — never split it or validate it as one word. Compose
   display names with `displayName()` from `types/user.ts`.
-- `@react-native-community/datetimepicker` has no usable web build. The
-  create-event form branches on `Platform.OS` and uses text inputs in browsers.
+- **Dates and times are picked, never typed.** `components/DateSelect.tsx` is a
+  month grid, `components/TimeSelect.tsx` a 15-minute list showing 12-hour
+  labels and storing `HH:MM`. Both are custom rather than native so web and
+  phone behave identically — free-text times let people enter "5:00 PM" into a
+  field that only parsed "17:00". `@react-native-community/datetimepicker` is
+  still installed but unused.
+- **Form errors go under the field**, not in an alert. See the `FieldErrors`
+  map in `create-event.tsx`. One combined alert can't say which field is wrong.
 
 ## Environment
 
@@ -146,28 +184,26 @@ Windows / PowerShell:
 
 ### Known gaps
 
-- **Points aren't validated by rules.** Nothing stops a member writing their own
-  `pointsAwarded`. Must be fixed before real members are on it — the rule needs
-  to compare against the event's `checkInPoints`.
+- **Scan windows are client-side only.** `utils/scanWindow.ts` enforces them in
+  the app, but the rules don't, so a request outside the window would still be
+  accepted. It awards the correct points either way, so this is an integrity
+  nuisance rather than a way to farm points.
 - **No email verification**, so the domain check only validates the string, not
-  that the person owns the address.
-- Auth doesn't persist on phones — no AsyncStorage configured, so members log in
-  again every launch. See the warning in the Expo logs.
-- Profile still shows `eventsAttended * 20` for points instead of summing real
-  awards.
-- Create-event form needs stronger field validation.
-- No UI for creating announcements.
+  that the person owns the address. Until this exists, "Northwestern students
+  only" isn't actually true — anyone can type an address they don't own.
+- No UI for creating announcements; they're still hand-written in the console.
 - `app.json` still names the app `frontend`, and points at Android icon files
   that don't exist.
 - `assets/images/UIC-SHPE-Webapp.png` is unreferenced.
+- `TimeSelect` opens at midnight when nothing is selected, so picking an evening
+  time is a long scroll — and AM/PM entries look alike. A sensible default would
+  help.
 
 ### Planned
 
-- **Check-out flow.** `checkedOutAt` on the check-in doc, `checkOutOpen` toggled
-  by organizers on the event, member scans the same QR again.
 - **Roles beyond `isAdmin`.** Admins granting access to exec — e.g. letting the
   secretary run points analysis, or exec create events. Needs an admin-facing
-  users screen to manage them.
+  users screen to manage them. Three separate wishes all reduce to this.
 - **Points / membership page** with analysis tools for officers.
 - **Completion bonus.** Points are split evenly between check-in and check-out,
   so partial attendance earns half. An even split can't distinguish leaving

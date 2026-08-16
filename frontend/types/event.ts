@@ -60,8 +60,6 @@ export interface EventDoc {
   /** Copied from the category at creation so rules can validate awards. */
   checkInPoints: number;
   checkOutPoints: number;
-  /** Organizers flip this on when the event is wrapping up. */
-  checkOutOpen: boolean;
   startsAt: Timestamp;
   endsAt: Timestamp;
   createdAt: Timestamp | FieldValue;

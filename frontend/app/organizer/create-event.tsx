@@ -96,7 +96,6 @@ export default function CreateEventScreen() {
         category,
         checkInPoints: points.checkInPoints,
         checkOutPoints: points.checkOutPoints,
-        checkOutOpen: false,
         startsAt: Timestamp.fromDate(startsAt),
         endsAt: Timestamp.fromDate(endsAt),
         createdAt: serverTimestamp(),

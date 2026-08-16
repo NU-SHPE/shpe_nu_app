@@ -60,10 +60,50 @@ service cloud.firestore {
             || (resource != null && resource.data.userId == request.auth.uid)
             || isAdmin());
 
+      // Members write their own check-ins from the app, which means the client
+      // supplies the point values — so the rules have to verify them against
+      // the event itself. Without this, anyone could open a console and award
+      // themselves any number they liked.
+      //
+      // Each half is only checked when it's actually present: a check-in write
+      // carries pointsAwarded, a check-out write carries checkOutPointsAwarded,
+      // and a merge write carries whichever half already existed.
       allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        && pointsMatchEvent(request.resource.data);
 
-      allow update, delete: if isAdmin();
+      // Updates are how the second half lands (setDoc with merge). The owner
+      // may add to their record but never rewrite who it belongs to, which
+      // event it's for, or a timestamp that's already been set.
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.eventId == resource.data.eventId
+        && pointsMatchEvent(request.resource.data)
+        && timestampUnchanged('checkedInAt')
+        && timestampUnchanged('checkedOutAt');
+
+      allow delete: if isAdmin();
+    }
+
+    function eventOf(data) {
+      return get(/databases/$(database)/documents/events/$(data.eventId)).data;
+    }
+
+    // Awarded points must equal what the event says that half is worth.
+    function pointsMatchEvent(data) {
+      return (!('pointsAwarded' in data)
+              || data.pointsAwarded == eventOf(data).checkInPoints)
+        && (!('checkOutPointsAwarded' in data)
+            || data.checkOutPointsAwarded == eventOf(data).checkOutPoints);
+    }
+
+    // Once a half is recorded, its timestamp is frozen — so nobody can re-scan
+    // to move their check-in time, and merge writes must carry it through
+    // untouched.
+    function timestampUnchanged(field) {
+      return !(field in resource.data)
+        || request.resource.data[field] == resource.data[field];
     }
   }
 }
