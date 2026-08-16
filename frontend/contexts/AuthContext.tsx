@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...profileInput,
       email: trimmedEmail,
       isAdmin: false,
+      isExec: false,
       createdAt: serverTimestamp(),
     });
   };

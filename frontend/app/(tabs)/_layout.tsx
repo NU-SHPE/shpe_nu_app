@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function TabLayout() {
   const { profile } = useAuth();
-  const isAdmin = profile?.isAdmin === true;
+  const canAccessOrganizer = profile?.isAdmin === true || profile?.isExec === true;
 
   return (
     <Tabs
@@ -67,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="organizer"
         options={{
-          href: isAdmin ? '/organizer' : null,
+          href: canAccessOrganizer ? '/organizer' : null,
           title: 'Organizer',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} color={color} size={24} />

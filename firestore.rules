@@ -13,32 +13,53 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Exec: create events, run check-in/out QR codes, post announcements.
+    // Granted by an admin from the roles screen, never self-service — see the
+    // isExec-only update rule below.
+    function isExec() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isExec == true;
+    }
+
     // Users can read any profile, but only write their own. New users must be
-    // created with isAdmin == false, and users cannot toggle their own isAdmin.
+    // created with isAdmin and isExec both false, and users cannot toggle
+    // either on themselves.
     match /users/{uid} {
       allow read: if isSignedIn();
 
       allow create: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.isAdmin == false;
+        && request.resource.data.isAdmin == false
+        && request.resource.data.isExec == false;
 
       allow update: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.isAdmin == resource.data.isAdmin;
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && request.resource.data.isExec == resource.data.isExec;
+
+      // The roles screen: an admin may flip isExec on any user, and nothing
+      // else — isAdmin itself stays console-only, same as before.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isExec']);
 
       allow delete: if false;
     }
 
-    // Events are readable by any authenticated user; only admins can write.
+    // Events are readable by any authenticated user. Admins and exec can
+    // create; only admins can edit or delete.
     match /events/{eventId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create: if (isAdmin() || isExec())
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
-    // Announcements are readable by any authenticated user; only admins can write.
+    // Announcements are readable by any authenticated user; admins and exec
+    // can write.
     match /announcements/{id} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isExec();
     }
 
     // Check-ins: a user can create only their own record and read only their

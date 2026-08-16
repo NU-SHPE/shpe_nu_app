@@ -66,7 +66,9 @@ export default function CreateEventScreen() {
     return next;
   };
 
-  if (!profileLoading && profile && profile.isAdmin !== true) {
+  const canCreateEvents = profile?.isAdmin === true || profile?.isExec === true;
+
+  if (!profileLoading && profile && !canCreateEvents) {
     return (
       <View style={styles.container}>
         <PageHeader title="Create Event" onBack={() => router.back()} />

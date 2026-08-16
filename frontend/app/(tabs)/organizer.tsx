@@ -41,7 +41,9 @@ export default function OrganizerScreen() {
     );
   }, []);
 
-  if (!profileLoading && profile && profile.isAdmin !== true) {
+  const canAccessOrganizer = profile?.isAdmin === true || profile?.isExec === true;
+
+  if (!profileLoading && profile && !canAccessOrganizer) {
     return (
       <View style={[styles.container, styles.center]}>
         <Ionicons name="lock-closed-outline" size={48} color="#888" />
@@ -68,7 +70,15 @@ export default function OrganizerScreen() {
             onPress={() => router.push('/organizer/create-event')}
           />
           {/* Post Announcement goes here next. */}
-          <View style={styles.actionSpacer} />
+          {profile?.isAdmin === true ? (
+            <ActionButton
+              icon="people-circle"
+              label="Manage Roles"
+              onPress={() => router.push('/organizer/manage-roles')}
+            />
+          ) : (
+            <View style={styles.actionSpacer} />
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Your Events</Text>

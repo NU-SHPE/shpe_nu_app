@@ -33,6 +33,8 @@ export interface UserProfileInput {
 export interface UserProfile extends UserProfileInput {
   email: string;
   isAdmin: boolean;
+  /** Grants the Organizer tab (create events, run check-in/out QR codes) and announcement posting. Granted from the admin roles screen, never self-service. */
+  isExec: boolean;
   createdAt: Timestamp | FieldValue;
 }
 
