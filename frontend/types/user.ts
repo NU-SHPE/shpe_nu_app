@@ -16,7 +16,8 @@ export interface UserProfileInput {
   firstName: string;
   /** May contain multiple surnames — never split or validate as one word. */
   lastName: string;
-  age: number;
+  /** `YYYY-MM-DD`. Use `calculateAge()` from `utils/date.ts` to derive age. */
+  birthday: string;
   sexAtBirth: SexAtBirth;
   gender: string;
   /** Self-described, optional — stored as '' when not provided. */

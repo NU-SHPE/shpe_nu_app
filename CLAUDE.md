@@ -180,8 +180,6 @@ Windows / PowerShell:
   a technical one — events already store `createdBy`, so it's enforceable
   whenever the chapter decides.
 - **Announcements**, with push notifications.
-- **Birthday instead of age.** Store a date so age updates itself rather than
-  going stale the moment someone has a birthday.
 - **"Add to Calendar"** on the event detail page — generates a calendar link
   from `startsAt`/`endsAt`, no backend needed.
 - **MentorSHPE points** — 1/meeting as a mentee, 1 per mentee for mentors,

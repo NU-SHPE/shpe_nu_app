@@ -41,6 +41,41 @@ export const formatTimeRange = (start: unknown, end: unknown): string => {
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
+/** `YYYY-MM-DD` → e.g. "January 1, 2006", for displaying a stored birthday. */
+export const formatDateInput = (value: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return '';
+  const [, year, month, day] = match.map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+/**
+ * `YYYY-MM-DD` birthday → age in whole years, or null if malformed.
+ * Recomputed from the stored date rather than a stored number, so age never
+ * goes stale.
+ */
+export const calculateAge = (birthday: string): number | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday);
+  if (!match) return null;
+
+  const [, year, month, day] = match.map(Number);
+  const born = new Date(year, month - 1, day);
+  if (born.getMonth() !== month - 1 || born.getDate() !== day) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - born.getFullYear();
+  const hadBirthdayThisYear =
+    today.getMonth() > born.getMonth() ||
+    (today.getMonth() === born.getMonth() && today.getDate() >= born.getDate());
+  if (!hadBirthdayThisYear) age -= 1;
+
+  return age;
+};
+
 /** Date → `YYYY-MM-DD`, the format the create-event form holds. */
 export const toDateInput = (date: Date): string =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

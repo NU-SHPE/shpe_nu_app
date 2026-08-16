@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { isChapterEmail, CHAPTER_EMAIL_LABEL } from '../utils/validation';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { DateSelect } from '../components/DateSelect';
+import { calculateAge, formatDateInput } from '../utils/date';
 import {
   SCHOOL_LEVEL_OPTIONS,
   SEX_AT_BIRTH_OPTIONS,
@@ -28,7 +30,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
   const [gender, setGender] = useState('');
   const [pronouns, setPronouns] = useState('');
@@ -48,7 +51,7 @@ export default function RegisterScreen() {
       !email ||
       !password ||
       !confirmPassword ||
-      !age ||
+      !birthday ||
       !sexAtBirth ||
       !gender ||
       !schoolLevel ||
@@ -76,9 +79,9 @@ export default function RegisterScreen() {
       return;
     }
 
-    const ageNum = Number.parseInt(age, 10);
-    if (!Number.isFinite(ageNum) || ageNum < 13 || ageNum > 120) {
-      Alert.alert('Error', 'Please enter a valid age.');
+    const age = calculateAge(birthday);
+    if (age == null || age < 13 || age > 120) {
+      Alert.alert('Error', 'Please enter a valid birthday.');
       return;
     }
 
@@ -87,7 +90,7 @@ export default function RegisterScreen() {
       await register(email, password, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        age: ageNum,
+        birthday,
         sexAtBirth,
         gender: gender.trim(),
         pronouns: pronouns.trim(),
@@ -170,14 +173,19 @@ export default function RegisterScreen() {
         />
 
         <Text style={styles.sectionLabel}>Profile</Text>
-        <TextInput
+        <TouchableOpacity
           style={styles.input}
-          placeholder="Age"
-          placeholderTextColor="#888"
-          value={age}
-          onChangeText={(t) => setAge(t.replace(/[^0-9]/g, ''))}
-          keyboardType="number-pad"
-          maxLength={3}
+          onPress={() => setShowBirthdayPicker(true)}
+        >
+          <Text style={birthday ? styles.inputValue : styles.inputPlaceholder}>
+            {birthday ? formatDateInput(birthday) : 'Birthday'}
+          </Text>
+        </TouchableOpacity>
+        <DateSelect
+          visible={showBirthdayPicker}
+          value={birthday}
+          onSelect={setBirthday}
+          onClose={() => setShowBirthdayPicker(false)}
         />
 
         <Text style={styles.fieldLabel}>Sex assigned at birth</Text>
@@ -307,6 +315,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 20,
     marginBottom: 15,
+    fontSize: 16,
+    justifyContent: 'center',
+  },
+  inputValue: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  inputPlaceholder: {
+    color: '#888',
     fontSize: 16,
   },
   button: {

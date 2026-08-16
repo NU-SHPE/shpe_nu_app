@@ -17,6 +17,8 @@ import { db } from '../firebaseConfig';
 import { useAuth } from '../contexts/AuthContext';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { PageHeader } from '../components/PageHeader';
+import { DateSelect } from '../components/DateSelect';
+import { calculateAge, formatDateInput } from '../utils/date';
 import {
   SCHOOL_LEVEL_OPTIONS,
   SEX_AT_BIRTH_OPTIONS,
@@ -30,7 +32,8 @@ export default function EditProfileScreen() {
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
   const [gender, setGender] = useState('');
   const [pronouns, setPronouns] = useState('');
@@ -44,7 +47,7 @@ export default function EditProfileScreen() {
     if (!profile) return;
     setFirstName(profile.firstName ?? '');
     setLastName(profile.lastName ?? '');
-    setAge(profile.age != null ? String(profile.age) : '');
+    setBirthday(profile.birthday ?? '');
     setSexAtBirth(profile.sexAtBirth);
     setGender(profile.gender ?? '');
     setPronouns(profile.pronouns ?? '');
@@ -60,7 +63,7 @@ export default function EditProfileScreen() {
     if (
       !firstName ||
       !lastName ||
-      !age ||
+      !birthday ||
       !sexAtBirth ||
       !gender ||
       !schoolLevel ||
@@ -70,9 +73,9 @@ export default function EditProfileScreen() {
       return;
     }
 
-    const ageNum = Number.parseInt(age, 10);
-    if (!Number.isFinite(ageNum) || ageNum < 13 || ageNum > 120) {
-      Alert.alert('Error', 'Please enter a valid age.');
+    const age = calculateAge(birthday);
+    if (age == null || age < 13 || age > 120) {
+      Alert.alert('Error', 'Please enter a valid birthday.');
       return;
     }
 
@@ -81,7 +84,7 @@ export default function EditProfileScreen() {
       await updateDoc(doc(db, 'users', user.uid), {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        age: ageNum,
+        birthday,
         sexAtBirth,
         gender: gender.trim(),
         pronouns: pronouns.trim(),
@@ -131,15 +134,20 @@ export default function EditProfileScreen() {
             autoCapitalize="words"
           />
 
-          <Text style={styles.fieldLabel}>Age</Text>
-          <TextInput
+          <Text style={styles.fieldLabel}>Birthday</Text>
+          <TouchableOpacity
             style={styles.input}
-            placeholder="Age"
-            placeholderTextColor="#888"
-            value={age}
-            onChangeText={(t) => setAge(t.replace(/[^0-9]/g, ''))}
-            keyboardType="number-pad"
-            maxLength={3}
+            onPress={() => setShowBirthdayPicker(true)}
+          >
+            <Text style={birthday ? styles.inputValue : styles.inputPlaceholder}>
+              {birthday ? formatDateInput(birthday) : 'Birthday'}
+            </Text>
+          </TouchableOpacity>
+          <DateSelect
+            visible={showBirthdayPicker}
+            value={birthday}
+            onSelect={setBirthday}
+            onClose={() => setShowBirthdayPicker(false)}
           />
 
           <Text style={styles.fieldLabel}>Sex assigned at birth</Text>
@@ -244,6 +252,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 20,
     marginBottom: 10,
+    fontSize: 16,
+    justifyContent: 'center',
+  },
+  inputValue: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  inputPlaceholder: {
+    color: '#888',
     fontSize: 16,
   },
   button: {

@@ -19,6 +19,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { displayName } from '../../types/user';
+import { calculateAge } from '../../utils/date';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -60,8 +61,10 @@ const ProfileScreen = () => {
       .filter(Boolean)
       .join(' · ') || 'Member';
 
+  const age = profile?.birthday ? calculateAge(profile.birthday) : null;
+
   const detailRows: { icon: any; label: string; value: string }[] = [
-    { icon: 'calendar-outline', label: 'Age', value: profile?.age != null ? String(profile.age) : '—' },
+    { icon: 'calendar-outline', label: 'Age', value: age != null ? String(age) : '—' },
     { icon: 'male-female-outline', label: 'Sex assigned at birth', value: profile?.sexAtBirth ?? '—' },
     { icon: 'person-outline', label: 'Gender', value: profile?.gender || '—' },
     { icon: 'chatbubble-ellipses-outline', label: 'Pronouns', value: profile?.pronouns || '—' },
