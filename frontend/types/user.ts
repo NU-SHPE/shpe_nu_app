@@ -12,6 +12,28 @@ export const SCHOOL_LEVEL_OPTIONS = [
 ] as const;
 export type SchoolLevel = (typeof SCHOOL_LEVEL_OPTIONS)[number];
 
+/**
+ * Starter list, not an official catalog — picked from `MajorSelect`, with
+ * "Other" as a free-text escape hatch for anything missing. Editing this list
+ * is just editing this array; it doesn't touch existing members' data since
+ * profiles store the resolved string, not a reference to this list.
+ */
+export const MAJOR_OPTIONS = [
+  'Applied Math',
+  'Artificial Intelligence',
+  'Biomedical Engineering',
+  'Chemical Engineering',
+  'Civil Engineering',
+  'Computer Engineering',
+  'Computer Science',
+  'Electrical Engineering',
+  'Environmental Engineering',
+  'Industrial Engineering',
+  'MaDE',
+  'Materials Science Engineering',
+  'Mechanical Engineering',
+] as const;
+
 export interface UserProfileInput {
   firstName: string;
   /** May contain multiple surnames — never split or validate as one word. */
@@ -23,9 +45,10 @@ export interface UserProfileInput {
   /** Self-described, optional — stored as '' when not provided. */
   pronouns: string;
   schoolLevel: SchoolLevel;
-  major: string;
-  /** Self-described, optional — stored as '' when not provided. */
-  minor: string;
+  /** One or more. Each entry is either a MAJOR_OPTIONS value or free-typed via "Other". */
+  majors: string[];
+  /** Free text, no picker — minors span too many schools/combinations for a curated list. Empty array if none. */
+  minors: string[];
   /** National Member ID, recommended — stored as '' when not provided. */
   memberId: string;
 }

@@ -46,8 +46,9 @@ firebase deploy --only firestore:rules
 | `components/theme.ts` | colors, spacing, radius, font sizes |
 | `components/PageHeader.tsx` | the navy banner on every screen |
 | `components/ActionButton.tsx` | icon-in-a-red-circle action cards |
-| `components/DateSelect.tsx` | month-grid calendar picker |
+| `components/DateSelect.tsx` | month-grid calendar picker, with a tap-to-jump year list |
 | `components/TimeSelect.tsx` | 15-minute time list |
+| `components/MajorSelect.tsx` | major picker (`types/user.ts`'s `MAJOR_OPTIONS`) with an "Other" free-text escape hatch |
 | `types/event.ts` | event categories and their point values |
 | `utils/date.ts` | timestamp formatting and form parsing |
 | `utils/qrPayload.ts` | check-in vs check-out QR payloads |
@@ -78,7 +79,8 @@ Collections are created implicitly on first write. No schema, no SQL.
 events         title, description, location, category, checkInPoints,
                checkOutPoints, startsAt, endsAt, createdAt, createdBy
 users          firstName, lastName, birthday, sexAtBirth, gender, pronouns,
-               schoolLevel, major, minor, memberId, email, isAdmin, createdAt
+               schoolLevel, majors[], minors[], memberId, email, isAdmin,
+               isExec, createdAt
 checkIns       userId, eventId, checkedInAt, pointsAwarded,
                checkedOutAt?, checkOutPointsAwarded?
 announcements  title, body, time, createdAt
@@ -149,8 +151,16 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
 ## Conventions
 
 - **Images use `require()`, not `import`.** Nothing declares `*.png` types.
-- **`Alert.alert` button callbacks don't fire on web** — it maps to
-  `window.alert`. Anything interactive needs a `Modal`.
+- **`Alert.alert` is a no-op on web** — in the installed react-native-web
+  version it's `static alert() {}`, not even a `window.alert` fallback. Any
+  message routed through it is silently invisible to web users. Errors and
+  confirmations need inline UI (field-level text, a banner, or a `Modal`) —
+  see `register.tsx` / `index.tsx` / `edit-profile.tsx` for the field-error
+  pattern (a `validate()` returning per-field errors, plus a `formError`
+  banner for anything not tied to one field). Screens that still call
+  `Alert.alert` for anything user-facing (`create-event.tsx`'s save-failure
+  path, `manage-roles.tsx`, `profile.tsx`'s sign-out failure) haven't been
+  converted yet.
 - **The QR scanner guard is a ref, not state.** The camera fires many times per
   second; async state updates can't keep up. It's a time-based cooldown so it
   expires on its own — an earlier boolean lock could wedge shut when an Android

@@ -79,7 +79,8 @@ const ProfileScreen = () => {
     { icon: 'person-outline', label: 'Gender', value: profile?.gender || '—' },
     { icon: 'chatbubble-ellipses-outline', label: 'Pronouns', value: profile?.pronouns || '—' },
     { icon: 'school-outline', label: 'School level', value: profile?.schoolLevel ?? '—' },
-    { icon: 'book-outline', label: 'Major', value: profile?.major || '—' },
+    { icon: 'book-outline', label: 'Major', value: profile?.majors?.length ? profile.majors.join(', ') : '—' },
+    { icon: 'bookmark-outline', label: 'Minor', value: profile?.minors?.length ? profile.minors.join(', ') : '—' },
     { icon: 'card-outline', label: 'Member ID', value: profile?.memberId || '—' },
   ];
 

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
@@ -19,39 +18,41 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState('');
 
   const router = useRouter();
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    setFormError('');
 
-    if (!isChapterEmail(email)) {
-      Alert.alert('Error', `Please use your ${CHAPTER_EMAIL_LABEL} email to sign in.`);
-      return;
+    const next: { email?: string; password?: string } = {};
+    if (!email.trim()) next.email = 'Enter your email.';
+    else if (!isChapterEmail(email)) {
+      next.email = `Please use your ${CHAPTER_EMAIL_LABEL} email to sign in.`;
     }
+    if (!password) next.password = 'Enter your password.';
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
 
     setIsLoading(true);
     try {
       await login(email, password);
     } catch (error: any) {
       const code = error?.code;
-      let message = 'An unexpected error occurred. Please try again.';
 
       if (code === 'auth/invalid-email') {
-        message = 'Please enter a valid email address.';
+        setErrors({ email: 'Please enter a valid email address.' });
       } else if (code === 'auth/user-not-found') {
-        message = 'No account found with this email.';
+        setErrors({ email: 'No account found with this email.' });
       } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        message = 'Incorrect password. Please try again.';
+        setErrors({ password: 'Incorrect password. Please try again.' });
       } else if (code === 'auth/too-many-requests') {
-        message = 'Too many failed attempts. Please try again later.';
+        setFormError('Too many failed attempts. Please try again later.');
+      } else {
+        setFormError('An unexpected error occurred. Please try again.');
       }
-
-      Alert.alert('Login Failed', message);
     } finally {
       setIsLoading(false);
     }
@@ -78,6 +79,7 @@ export default function LoginScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
       <TextInput
         style={styles.input}
@@ -87,6 +89,9 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
+      {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
+      {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
 
       <TouchableOpacity
         style={styles.button}
@@ -134,6 +139,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 15,
     fontSize: 16,
+  },
+  errorText: {
+    color: '#D50032',
+    fontSize: 13,
+    marginTop: -10,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  formErrorText: {
+    color: '#D50032',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   button: {
     backgroundColor: '#D50032',
