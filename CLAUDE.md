@@ -74,6 +74,7 @@ Collections are created implicitly on first write. No schema, no SQL.
 | `events` | the Create Event form (organizer tab) |
 | `checkIns` | scanning an event QR, id `{uid}_{eventId}` |
 | `announcements` | by hand in the console — no UI yet |
+| `rsvps` | tapping RSVP on the event detail page, id `{uid}_{eventId}` |
 
 ```
 events         title, description, location, category, checkInPoints,
@@ -84,6 +85,7 @@ users          firstName, lastName, birthday, sexAtBirth, gender, pronouns,
 checkIns       userId, eventId, checkedInAt, pointsAwarded,
                checkedOutAt?, checkOutPointsAwarded?
 announcements  title, body, time, createdAt
+rsvps          userId, eventId, rsvpedAt
 ```
 
 ### Check-in / check-out

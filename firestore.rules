@@ -107,6 +107,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // RSVPs: readable by any signed-in member — same trust level as events
+    // and announcements, since (unlike checkIns) RSVP carries no points and
+    // isn't integrity-sensitive. A member may create or delete only their
+    // own RSVP, keyed by doc ID the same way checkIns is (`{uid}_{eventId}`).
+    match /rsvps/{id} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && id.split('_')[0] == request.auth.uid
+        && id.split('_')[1] == request.resource.data.eventId
+        && request.resource.data.userId == request.auth.uid;
+
+      allow delete: if isSignedIn() && id.split('_')[0] == request.auth.uid;
+
+      allow update: if false;
+    }
+
     function eventOf(data) {
       return get(/databases/$(database)/documents/events/$(data.eventId)).data;
     }

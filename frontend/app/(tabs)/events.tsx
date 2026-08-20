@@ -1,19 +1,20 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
 import { formatEventDate, formatTimeRange } from '../../utils/date';
 
-const minicalendarIcon = require('../../assets/images/mini-calendarIcon.png');
-const minilocationIcon = require('../../assets/images/mini-locationIcon.png');
-
 export default function EventPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [myEventIds, setMyEventIds] = useState<Set<string>>(new Set());
+  const [showMineOnly, setShowMineOnly] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('startsAt', 'asc'));
@@ -30,19 +31,55 @@ export default function EventPage() {
     );
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setMyEventIds(new Set());
+      return;
+    }
+    const q = query(collection(db, 'rsvps'), where('userId', '==', user.uid));
+    return onSnapshot(
+      q,
+      (snapshot) => setMyEventIds(new Set(snapshot.docs.map((d) => d.data().eventId))),
+      (error) => console.error('Error loading your RSVPs:', error),
+    );
+  }, [user]);
+
+  const visibleEvents = showMineOnly ? events.filter((ev) => myEventIds.has(ev.id)) : events;
+
   return (
     <View style={styles.container}>
       <PageHeader title="Upcoming Events" />
+
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterChip, !showMineOnly && styles.filterChipActive]}
+          onPress={() => setShowMineOnly(false)}
+        >
+          <Text style={[styles.filterChipText, !showMineOnly && styles.filterChipTextActive]}>
+            All Events
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, showMineOnly && styles.filterChipActive]}
+          onPress={() => setShowMineOnly(true)}
+        >
+          <Text style={[styles.filterChipText, showMineOnly && styles.filterChipTextActive]}>
+            Your RSVPs
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.eventList}>
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#D40032" />
           </View>
-        ) : events.length === 0 ? (
-          <Text style={[styles.desc, { marginHorizontal: 20 }]}>No upcoming events.</Text>
+        ) : visibleEvents.length === 0 ? (
+          <Text style={[styles.desc, { marginHorizontal: 20 }]}>
+            {showMineOnly ? "You haven't RSVPed to any events yet." : 'No upcoming events.'}
+          </Text>
         ) : (
-          events.map((ev) => {
+          visibleEvents.map((ev) => {
             const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
             return (
               <TouchableOpacity
@@ -55,13 +92,13 @@ export default function EventPage() {
                 </Text>
                 <Text style={styles.title}>{ev.title ?? 'Untitled Event'}</Text>
                 <View style={styles.iconRow}>
-                  <Image source={minicalendarIcon} style={styles.smallIcon} />
+                  <Ionicons name="calendar-outline" size={16} color="#636363" />
                   <Text style={styles.info}>
                     {formatEventDate(ev.startsAt)}{timeStr ? ` · ${timeStr}` : ''}
                   </Text>
                 </View>
                 <View style={styles.iconRow}>
-                  <Image source={minilocationIcon} style={styles.smallIcon} />
+                  <Ionicons name="location-outline" size={16} color="#636363" />
                   <Text style={styles.info}>{ev.location ?? ''}</Text>
                 </View>
                 <Text style={styles.desc}>{ev.description ?? ''}</Text>
@@ -146,9 +183,34 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  smallIcon: {
-    width: 16,
-    height: 16,
-    resizeMode: 'contain',
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+
+  filterChipActive: {
+    backgroundColor: '#001E62',
+    borderColor: '#001E62',
+  },
+
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#636363',
+  },
+
+  filterChipTextActive: {
+    color: '#fff',
   },
 });

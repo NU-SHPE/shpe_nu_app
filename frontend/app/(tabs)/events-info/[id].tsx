@@ -1,24 +1,36 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
 import { db } from '../../../firebaseConfig';
+import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
 
-const attendanceIcon = require('../../../assets/images/attendanceIcon.png');
-const calendarIcon = require('../../../assets/images/calendarIcon.png');
-const checkinIcon = require('../../../assets/images/checkinIcon.png');
-const locationIcon = require('../../../assets/images/locationIcon.png');
-const rsvpIcon = require('../../../assets/images/rsvpIcon.png');
+const NAVY = '#001E62';
 
 export default function EventInfo() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [rsvped, setRsvped] = useState(false);
+  const [rsvpCount, setRsvpCount] = useState(0);
+  const [rsvpSaving, setRsvpSaving] = useState(false);
+  const [rsvpError, setRsvpError] = useState('');
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -37,6 +49,48 @@ export default function EventInfo() {
     };
     fetchEvent();
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !user) return;
+    return onSnapshot(
+      doc(db, 'rsvps', `${user.uid}_${id}`),
+      (snap) => setRsvped(snap.exists()),
+      (error) => console.error('Error loading RSVP status:', error),
+    );
+  }, [id, user]);
+
+  useEffect(() => {
+    if (!id) return;
+    const q = query(collection(db, 'rsvps'), where('eventId', '==', id));
+    return onSnapshot(
+      q,
+      (snapshot) => setRsvpCount(snapshot.size),
+      (error) => console.error('Error loading RSVP count:', error),
+    );
+  }, [id]);
+
+  const toggleRsvp = async () => {
+    if (!user || !id) return;
+    setRsvpError('');
+    setRsvpSaving(true);
+    try {
+      const rsvpRef = doc(db, 'rsvps', `${user.uid}_${id}`);
+      if (rsvped) {
+        await deleteDoc(rsvpRef);
+      } else {
+        await setDoc(rsvpRef, {
+          userId: user.uid,
+          eventId: id,
+          rsvpedAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.error('Error updating RSVP:', error);
+      setRsvpError('Could not update your RSVP. Please try again.');
+    } finally {
+      setRsvpSaving(false);
+    }
+  };
 
   const timeStr = formatTimeRange(event?.startsAt, event?.endsAt);
 
@@ -59,7 +113,7 @@ export default function EventInfo() {
         <ScrollView contentContainerStyle={styles.container}>
           <Card>
             <View style={styles.iconRow}>
-              <Image source={calendarIcon} style={styles.medIcon} />
+              <Ionicons name="calendar-outline" size={24} color={NAVY} />
               <Text style={styles.meta}>Date & Time</Text>
             </View>
             <Text style={[styles.meta, styles.marginLeft]}>
@@ -69,7 +123,7 @@ export default function EventInfo() {
               <Text style={[styles.meta, styles.marginLeft]}>{timeStr}</Text>
             ) : null}
             <View style={styles.iconRow}>
-              <Image source={locationIcon} style={styles.medIcon} />
+              <Ionicons name="location-outline" size={24} color={NAVY} />
               <Text style={styles.meta}>Location</Text>
             </View>
             <Text style={[styles.meta, styles.marginLeft]}>{event.location ?? ''}</Text>
@@ -83,26 +137,29 @@ export default function EventInfo() {
           <View style={styles.section}>
             <Card>
               <View style={styles.iconRow}>
-                <Image source={rsvpIcon} style={styles.smallIcon} />
+                <Ionicons name="people-outline" size={22} color={NAVY} />
                 <Text style={[styles.header2, styles.blue]}>RSVP</Text>
-                <Image source={attendanceIcon} style={styles.smallIcon} />
+                <Text style={styles.rsvpCountInline}>· {rsvpCount} attending</Text>
               </View>
-              {/* TODO: RSVP is not backed by Firestore yet — no rsvps collection exists. */}
               <TouchableOpacity
-                style={styles.idbutton}
-                onPress={() =>
-                  Alert.alert('RSVP', 'RSVP is not available yet — check in at the event instead.')
-                }
+                style={[styles.idbutton, rsvped && styles.idbuttonActive]}
+                onPress={toggleRsvp}
+                disabled={rsvpSaving}
               >
-                <Text style={styles.buttonTxt}>RSVP Now</Text>
+                {rsvpSaving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonTxt}>{rsvped ? 'Cancel RSVP' : 'RSVP Now'}</Text>
+                )}
               </TouchableOpacity>
+              {rsvpError ? <Text style={styles.rsvpError}>{rsvpError}</Text> : null}
             </Card>
             <TouchableOpacity
               style={styles.checkinbutton}
               onPress={() => router.push('/check-in')}
             >
               <View style={styles.iconRow}>
-                <Image source={checkinIcon} style={styles.smallIcon} />
+                <Ionicons name="scan-outline" size={20} color="#fff" />
                 <Text style={styles.buttonTxt}>Check in to Event</Text>
               </View>
             </TouchableOpacity>
@@ -144,17 +201,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   marginLeft: {
-    marginLeft: 48,
-  },
-  medIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-  },
-  smallIcon: {
-    width: 20,
-    height: 20,
-    resizeMode: 'contain',
+    marginLeft: 32,
   },
   section: {
     marginBottom: 25,
@@ -165,6 +212,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#001E62',
     marginBottom: 10,
     alignItems: 'center',
+  },
+  idbuttonActive: {
+    backgroundColor: '#6b7280',
+  },
+  rsvpCountInline: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  rsvpError: {
+    color: '#D50032',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: -4,
   },
   checkinbutton: {
     padding: 15,
