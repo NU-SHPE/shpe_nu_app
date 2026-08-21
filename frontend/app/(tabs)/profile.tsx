@@ -9,9 +9,12 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import {
   collection,
+  doc,
+  getDoc,
   onSnapshot,
   query,
   where,
@@ -19,11 +22,15 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { displayName } from '../../types/user';
-import { calculateAge } from '../../utils/date';
+import type { CheckInDoc } from '../../types/checkIn';
+import type { EventDoc } from '../../types/event';
+import { calculateAge, formatEventDate, toDate } from '../../utils/date';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
 const RED = '#c0392b';
+
+type CheckInRow = CheckInDoc & { id: string };
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -31,11 +38,16 @@ const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [eventsAttended, setEventsAttended] = useState(0);
   const [points, setPoints] = useState(0);
+  const [checkIns, setCheckIns] = useState<CheckInRow[]>([]);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [eventCache, setEventCache] = useState<Record<string, EventDoc>>({});
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
       setEventsAttended(0);
       setPoints(0);
+      setCheckIns([]);
       return;
     }
 
@@ -45,18 +57,58 @@ const ProfileScreen = () => {
     );
     return onSnapshot(
       checkInsQuery,
-      (snapshot) => { 
-        setEventsAttended(snapshot.size);
+      (snapshot) => {
+        const rows = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as CheckInRow);
+        setCheckIns(rows);
+        setEventsAttended(rows.length);
         setPoints(
-          snapshot.docs.reduce((sum, d) => {
-            const data = d.data();
-            return sum + (data.pointsAwarded ?? 0) + (data.checkOutPointsAwarded ?? 0);
-        }, 0),
-      );
-    },
-    (error) => console.error('Error loading check-ins:', error),
+          rows.reduce((sum, r) => sum + (r.pointsAwarded ?? 0) + (r.checkOutPointsAwarded ?? 0), 0),
+        );
+      },
+      (error) => console.error('Error loading check-ins:', error),
     );
   }, [user]);
+
+  // One-time fetch, not onSnapshot: this modal is opened on-demand and
+  // closes, not a persistently-mounted tab, and the primary numbers above
+  // already stay live off the checkIns listener untouched — only the
+  // supplementary event titles/dates shown in the log are fetched here, and
+  // cached for the session so reopening the modal doesn't refetch.
+  useEffect(() => {
+    if (!historyVisible) return;
+    const missingIds = [...new Set(checkIns.map((c) => c.eventId))].filter(
+      (id) => !(id in eventCache),
+    );
+    if (missingIds.length === 0) return;
+
+    setEventsLoading(true);
+    Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          const snap = await getDoc(doc(db, 'events', id));
+          return snap.exists() ? ([id, snap.data() as EventDoc] as const) : null;
+        } catch (error) {
+          console.error('Error loading event for attendance log:', error);
+          return null;
+        }
+      }),
+    ).then((results) => {
+      setEventCache((prev) => {
+        const next = { ...prev };
+        for (const result of results) {
+          if (result) next[result[0]] = result[1];
+        }
+        return next;
+      });
+      setEventsLoading(false);
+    });
+  }, [historyVisible, checkIns, eventCache]);
+
+  const sortedCheckIns = [...checkIns].sort((a, b) => {
+    const aTime = toDate(a.checkedInAt)?.getTime() ?? 0;
+    const bTime = toDate(b.checkedInAt)?.getTime() ?? 0;
+    return bTime - aTime;
+  });
 
   const handleSignOut = async () => {
     try {
@@ -119,23 +171,23 @@ const ProfileScreen = () => {
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <TouchableOpacity style={styles.statCard} onPress={() => setHistoryVisible(true)}>
             <View style={styles.statIconContainer}>
               <Ionicons name="calendar-clear" size={20} color={RED} />
             </View>
             <Text style={styles.statNumber}>{eventsAttended}</Text>
             <Text style={styles.statLabel}>Events{'\n'}Attended</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.statDivider} />
 
-          <View style={styles.statCard}>
+          <TouchableOpacity style={styles.statCard} onPress={() => setHistoryVisible(true)}>
             <View style={styles.statIconContainer}>
               <Ionicons name="trophy" size={20} color={RED} />
             </View>
             <Text style={styles.statNumber}>{points}</Text>
             <Text style={styles.statLabel}>Points{'\n'}Earned</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Details */}
@@ -222,6 +274,51 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={historyVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setHistoryVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Attendance History</Text>
+              <TouchableOpacity onPress={() => setHistoryVisible(false)} hitSlop={10}>
+                <Ionicons name="close" size={24} color="#555" />
+              </TouchableOpacity>
+            </View>
+
+            {sortedCheckIns.length === 0 ? (
+              <Text style={styles.historyEmpty}>
+                No check-ins yet — attend an event and scan its QR code to start earning points.
+              </Text>
+            ) : (
+              <ScrollView style={styles.historyList}>
+                {eventsLoading ? <ActivityIndicator style={{ marginBottom: 12 }} color={RED} /> : null}
+                {sortedCheckIns.map((row) => {
+                  const ev = eventCache[row.eventId];
+                  const rowPoints = (row.pointsAwarded ?? 0) + (row.checkOutPointsAwarded ?? 0);
+                  return (
+                    <View key={row.id} style={styles.historyRow}>
+                      <View style={styles.historyRowText}>
+                        <Text style={styles.historyEventTitle} numberOfLines={1}>
+                          {ev?.title ?? (eventsLoading ? 'Loading…' : 'Event unavailable')}
+                        </Text>
+                        <Text style={styles.historyEventDate}>
+                          {formatEventDate(ev?.startsAt ?? row.checkedInAt)}
+                        </Text>
+                      </View>
+                      <Text style={styles.historyPoints}>+{rowPoints} pts</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -389,6 +486,67 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#e5e5e5',
     marginLeft: 44,
+  },
+
+  // Attendance history modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '75%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111',
+  },
+  historyEmpty: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
+  historyList: {
+    flexGrow: 0,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e5e5',
+  },
+  historyRowText: {
+    flex: 1,
+    marginRight: 12,
+  },
+  historyEventTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111',
+  },
+  historyEventDate: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  historyPoints: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: RED,
   },
 });
 

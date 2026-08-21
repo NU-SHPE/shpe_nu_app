@@ -39,6 +39,17 @@ export const formatTimeRange = (start: unknown, end: unknown): string => {
   return parts.join(' – ');
 };
 
+/**
+ * An event is "past" once it has actually ended — not when scanning closes
+ * (a narrower window, see utils/scanWindow.ts). Missing endsAt fails open
+ * (not past) rather than silently vanishing a bad-data event into a
+ * collapsed section nobody opens by default.
+ */
+export const isEventPast = (event: { endsAt?: unknown }, now: Date = new Date()): boolean => {
+  const end = toDate(event.endsAt);
+  return end ? end.getTime() < now.getTime() : false;
+};
+
 const pad = (value: number): string => String(value).padStart(2, '0');
 
 /** `YYYY-MM-DD` → e.g. "January 1, 2006", for displaying a stored birthday. */

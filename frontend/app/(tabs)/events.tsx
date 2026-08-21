@@ -1,12 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
-import { formatEventDate, formatTimeRange } from '../../utils/date';
+import { CollapsibleSection } from '../../components/CollapsibleSection';
+import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
 
 export default function EventPage() {
   const router = useRouter();
@@ -46,6 +47,41 @@ export default function EventPage() {
 
   const visibleEvents = showMineOnly ? events.filter((ev) => myEventIds.has(ev.id)) : events;
 
+  const upcoming = useMemo(() => visibleEvents.filter((ev) => !isEventPast(ev)), [visibleEvents]);
+  // Source query is orderBy('startsAt','asc'), so reversing the past slice
+  // gives most-recent-first without a second sort pass.
+  const past = useMemo(
+    () => [...visibleEvents.filter((ev) => isEventPast(ev))].reverse(),
+    [visibleEvents],
+  );
+
+  const renderEventCard = (ev: any) => {
+    const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
+    return (
+      <TouchableOpacity
+        key={ev.id}
+        style={styles.card}
+        onPress={() => router.push(`/events-info/${ev.id}`)}
+      >
+        <Text style={styles.arrow}>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </Text>
+        <Text style={styles.title}>{ev.title ?? 'Untitled Event'}</Text>
+        <View style={styles.iconRow}>
+          <Ionicons name="calendar-outline" size={16} color="#636363" />
+          <Text style={styles.info}>
+            {formatEventDate(ev.startsAt)}{timeStr ? ` · ${timeStr}` : ''}
+          </Text>
+        </View>
+        <View style={styles.iconRow}>
+          <Ionicons name="location-outline" size={16} color="#636363" />
+          <Text style={styles.info}>{ev.location ?? ''}</Text>
+        </View>
+        <Text style={styles.desc}>{ev.description ?? ''}</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <PageHeader title="Upcoming Events" />
@@ -74,39 +110,25 @@ export default function EventPage() {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#D40032" />
           </View>
-        ) : visibleEvents.length === 0 ? (
-          <Text style={[styles.desc, { marginHorizontal: 20 }]}>
-            {showMineOnly ? "You haven't RSVPed to any events yet." : 'No upcoming events.'}
-          </Text>
         ) : (
-          visibleEvents.map((ev) => {
-            const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
-            return (
-              <TouchableOpacity
-                key={ev.id}
-                style={styles.card}
-                onPress={() => router.push(`/events-info/${ev.id}`)}
-              >
-                <Text style={styles.arrow}>
-                  <Ionicons name="chevron-forward" size={20} color="#999" />
-                </Text>
-                <Text style={styles.title}>{ev.title ?? 'Untitled Event'}</Text>
-                <View style={styles.iconRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#636363" />
-                  <Text style={styles.info}>
-                    {formatEventDate(ev.startsAt)}{timeStr ? ` · ${timeStr}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.iconRow}>
-                  <Ionicons name="location-outline" size={16} color="#636363" />
-                  <Text style={styles.info}>{ev.location ?? ''}</Text>
-                </View>
-                <Text style={styles.desc}>{ev.description ?? ''}</Text>
-              </TouchableOpacity>
-            );
-          })
-        )}
+          <>
+            {upcoming.length === 0 ? (
+              <Text style={[styles.desc, { marginHorizontal: 20 }]}>
+                {showMineOnly ? "You haven't RSVPed to any events yet." : 'No upcoming events.'}
+              </Text>
+            ) : (
+              upcoming.map(renderEventCard)
+            )}
 
+            {past.length > 0 ? (
+              <View style={styles.pastSection}>
+                <CollapsibleSection title="Past Events" count={past.length}>
+                  {past.map(renderEventCard)}
+                </CollapsibleSection>
+              </View>
+            ) : null}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -173,6 +195,11 @@ const styles = StyleSheet.create({
 
   scroll: {
     flex: 1,
+  },
+
+  pastSection: {
+    marginHorizontal: 20,
+    marginTop: 4,
   },
 
   iconRow: {

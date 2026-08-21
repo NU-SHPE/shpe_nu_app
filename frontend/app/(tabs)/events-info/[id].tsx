@@ -16,7 +16,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import Card from '../../../components/Card';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
-import { formatEventDate, formatTimeRange } from '../../../utils/date';
+import { formatEventDate, formatTimeRange, isEventPast } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
 
 const NAVY = '#001E62';
@@ -69,8 +69,10 @@ export default function EventInfo() {
     );
   }, [id]);
 
+  const eventPast = event ? isEventPast(event) : false;
+
   const toggleRsvp = async () => {
-    if (!user || !id) return;
+    if (!user || !id || eventPast) return;
     setRsvpError('');
     setRsvpSaving(true);
     try {
@@ -142,16 +144,25 @@ export default function EventInfo() {
                 <Text style={styles.rsvpCountInline}>· {rsvpCount} attending</Text>
               </View>
               <TouchableOpacity
-                style={[styles.idbutton, rsvped && styles.idbuttonActive]}
+                style={[
+                  styles.idbutton,
+                  rsvped && styles.idbuttonActive,
+                  eventPast && styles.idbuttonDisabled,
+                ]}
                 onPress={toggleRsvp}
-                disabled={rsvpSaving}
+                disabled={rsvpSaving || eventPast}
               >
                 {rsvpSaving ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonTxt}>{rsvped ? 'Cancel RSVP' : 'RSVP Now'}</Text>
+                  <Text style={styles.buttonTxt}>
+                    {eventPast ? 'RSVP Closed' : rsvped ? 'Cancel RSVP' : 'RSVP Now'}
+                  </Text>
                 )}
               </TouchableOpacity>
+              {eventPast ? (
+                <Text style={styles.rsvpClosedNote}>This event has already ended.</Text>
+              ) : null}
               {rsvpError ? <Text style={styles.rsvpError}>{rsvpError}</Text> : null}
             </Card>
             <TouchableOpacity
@@ -216,9 +227,18 @@ const styles = StyleSheet.create({
   idbuttonActive: {
     backgroundColor: '#6b7280',
   },
+  idbuttonDisabled: {
+    backgroundColor: '#c7c7cc',
+  },
   rsvpCountInline: {
     fontSize: 14,
     color: '#666666',
+  },
+  rsvpClosedNote: {
+    color: '#888888',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: -4,
   },
   rsvpError: {
     color: '#D50032',
