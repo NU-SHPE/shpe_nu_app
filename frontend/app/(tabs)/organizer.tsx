@@ -20,7 +20,7 @@ import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date'
 
 export default function OrganizerScreen() {
   const router = useRouter();
-  const { profile, profileLoading } = useAuth();
+  const { user, profile, profileLoading } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pastExpanded, setPastExpanded] = useState(false);
@@ -45,6 +45,9 @@ export default function OrganizerScreen() {
   }, []);
 
   const canAccessOrganizer = profile?.isAdmin === true || profile?.isExec === true;
+  // Admin manages every event; exec only the ones they created themselves —
+  // mirrors the ownership check in firestore.rules' events update/delete rule.
+  const canManageEvent = (ev: any) => profile?.isAdmin === true || ev.createdBy === user?.uid;
 
   const activeEvents = useMemo(() => events.filter((ev) => !isEventPast(ev)), [events]);
   // Source query is orderBy('startsAt','asc'), so reversing gives
@@ -170,6 +173,15 @@ export default function OrganizerScreen() {
                           <Ionicons name="log-out" size={22} color="#fff" />
                         </TouchableOpacity>
                       ) : null}
+
+                      {canManageEvent(ev) ? (
+                        <TouchableOpacity
+                          style={[styles.qrButton, styles.qrButtonEdit]}
+                          onPress={() => router.push(`/organizer/edit-event/${ev.id}`)}
+                        >
+                          <Ionicons name="pencil" size={20} color="#fff" />
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   </View>
                 );
@@ -200,14 +212,24 @@ export default function OrganizerScreen() {
                             {[ev.location, category].filter(Boolean).join(' · ')}
                           </Text>
                         </View>
-                        {profile?.isAdmin === true ? (
-                          <View style={styles.attendanceBadge}>
-                            <Ionicons name="people" size={14} color="#666" />
-                            <Text style={styles.attendanceBadgeText}>
-                              {count === undefined ? '…' : count}
-                            </Text>
-                          </View>
-                        ) : null}
+                        <View style={styles.pastCardActions}>
+                          {profile?.isAdmin === true ? (
+                            <View style={styles.attendanceBadge}>
+                              <Ionicons name="people" size={14} color="#666" />
+                              <Text style={styles.attendanceBadgeText}>
+                                {count === undefined ? '…' : count}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {canManageEvent(ev) ? (
+                            <TouchableOpacity
+                              style={[styles.qrButton, styles.qrButtonEdit, styles.pastEditButton]}
+                              onPress={() => router.push(`/organizer/edit-event/${ev.id}`)}
+                            >
+                              <Ionicons name="pencil" size={18} color="#fff" />
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
                       </View>
                     );
                   })}
@@ -299,11 +321,25 @@ const styles = StyleSheet.create({
   qrButtonOut: {
     backgroundColor: '#1B2A6B',
   },
+  qrButtonEdit: {
+    backgroundColor: '#6b7280',
+  },
   pastSection: {
     marginTop: 4,
   },
   pastCard: {
     opacity: 0.85,
+  },
+  pastCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pastEditButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginLeft: 0,
   },
   attendanceBadge: {
     flexDirection: 'row',

@@ -301,7 +301,15 @@ const ProfileScreen = () => {
                   const ev = eventCache[row.eventId];
                   const rowPoints = (row.pointsAwarded ?? 0) + (row.checkOutPointsAwarded ?? 0);
                   return (
-                    <View key={row.id} style={styles.historyRow}>
+                    <TouchableOpacity
+                      key={row.id}
+                      style={styles.historyRow}
+                      disabled={!ev}
+                      onPress={() => {
+                        setHistoryVisible(false);
+                        router.push(`/events-info/${row.eventId}`);
+                      }}
+                    >
                       <View style={styles.historyRowText}>
                         <Text style={styles.historyEventTitle} numberOfLines={1}>
                           {ev?.title ?? (eventsLoading ? 'Loading…' : 'Event unavailable')}
@@ -310,8 +318,11 @@ const ProfileScreen = () => {
                           {formatEventDate(ev?.startsAt ?? row.checkedInAt)}
                         </Text>
                       </View>
-                      <Text style={styles.historyPoints}>+{rowPoints} pts</Text>
-                    </View>
+                      <View style={styles.historyRowRight}>
+                        <Text style={styles.historyPoints}>+{rowPoints} pts</Text>
+                        {ev ? <Ionicons name="chevron-forward" size={16} color="#bbb" /> : null}
+                      </View>
+                    </TouchableOpacity>
                   );
                 })}
               </ScrollView>
@@ -547,6 +558,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: RED,
+  },
+  historyRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });
 

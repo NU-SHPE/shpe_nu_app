@@ -47,12 +47,19 @@ service cloud.firestore {
     }
 
     // Events are readable by any authenticated user. Admins and exec can
-    // create; only admins can edit or delete.
+    // create. Admins can edit or delete any event; exec can only edit or
+    // delete events they created themselves — createdBy is pinned on
+    // update so an exec can't reassign an event to someone else.
     match /events/{eventId} {
       allow read: if isSignedIn();
       allow create: if (isAdmin() || isExec())
         && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isExec()
+            && resource.data.createdBy == request.auth.uid
+            && request.resource.data.createdBy == resource.data.createdBy);
+      allow delete: if isAdmin()
+        || (isExec() && resource.data.createdBy == request.auth.uid);
     }
 
     // Announcements are readable by any authenticated user; admins and exec

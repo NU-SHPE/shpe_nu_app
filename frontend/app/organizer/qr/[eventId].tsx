@@ -44,7 +44,9 @@ export default function OrganizerQrScreen() {
     fetchEvent();
   }, [eventId]);
 
-  if (!profileLoading && profile && profile.isAdmin !== true) {
+  const canAccessOrganizer = profile?.isAdmin === true || profile?.isExec === true;
+
+  if (!profileLoading && profile && !canAccessOrganizer) {
     return (
       <View style={[styles.container, styles.center]}>
         <Ionicons name="lock-closed-outline" size={48} color="#888" />
