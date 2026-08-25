@@ -12,14 +12,36 @@ import {
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
-import { formatEventDate, formatTimeRange, isEventPast } from '../../../utils/date';
+import { formatEventDate, formatTimeRange, isEventPast, toDate } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
 
 const NAVY = '#001E62';
+
+/**
+ * A plain link, not the real Google Calendar API — no OAuth, no API key, no
+ * backend. Google's "render" endpoint pre-fills an event from URL params and
+ * lets the visitor add it to their own calendar; this doesn't touch the
+ * chapter's shared calendar at all.
+ */
+const toGCalDate = (date: Date) => date.toISOString().replace(/[-:]|\.\d{3}/g, '');
+
+const buildGoogleCalendarUrl = (event: any): string | null => {
+  const start = toDate(event.startsAt);
+  const end = toDate(event.endsAt);
+  if (!start || !end) return null;
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title ?? '',
+    dates: `${toGCalDate(start)}/${toGCalDate(end)}`,
+    details: event.description ?? '',
+    location: event.location ?? '',
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
 
 export default function EventInfo() {
   const router = useRouter();
@@ -95,6 +117,7 @@ export default function EventInfo() {
   };
 
   const timeStr = formatTimeRange(event?.startsAt, event?.endsAt);
+  const calendarUrl = event ? buildGoogleCalendarUrl(event) : null;
 
   return (
     <>
@@ -174,6 +197,17 @@ export default function EventInfo() {
                 <Text style={styles.buttonTxt}>Check in to Event</Text>
               </View>
             </TouchableOpacity>
+            {calendarUrl ? (
+              <TouchableOpacity
+                style={styles.calendarButton}
+                onPress={() => Linking.openURL(calendarUrl)}
+              >
+                <View style={styles.iconRow}>
+                  <Ionicons name="calendar-outline" size={20} color={NAVY} />
+                  <Text style={styles.calendarButtonTxt}>Add to Calendar</Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </ScrollView>
       )}
@@ -255,5 +289,17 @@ const styles = StyleSheet.create({
   },
   buttonTxt: {
     color: '#ffffff',
+  },
+  calendarButton: {
+    padding: 15,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: NAVY,
+    alignItems: 'center',
+  },
+  calendarButtonTxt: {
+    color: NAVY,
+    fontWeight: '600',
   },
 });

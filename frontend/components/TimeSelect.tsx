@@ -13,6 +13,12 @@ import { colors, fontSize, radius, spacing } from './theme';
 /** Minutes between options. 15 gives 96 choices across the day. */
 const STEP_MINUTES = 15;
 const ROW_HEIGHT = 48;
+/**
+ * The list starts here instead of midnight, so it opens on a reasonable
+ * hour for a college event and wraps around through the night at the end —
+ * same 96 options, just rotated so evening times aren't a long scroll away.
+ */
+const START_HOUR = 6;
 
 interface Props {
   visible: boolean;
@@ -36,7 +42,10 @@ export const formatTimeLabel = (value: string): string => {
 
 const buildTimes = (): string[] => {
   const out: string[] = [];
-  for (let minutes = 0; minutes < 24 * 60; minutes += STEP_MINUTES) {
+  const startMinutes = START_HOUR * 60;
+  const totalSlots = (24 * 60) / STEP_MINUTES;
+  for (let i = 0; i < totalSlots; i++) {
+    const minutes = (startMinutes + i * STEP_MINUTES) % (24 * 60);
     out.push(`${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`);
   }
   return out;
