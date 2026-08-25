@@ -49,6 +49,7 @@ firebase deploy --only firestore:rules
 | `components/DateSelect.tsx` | month-grid calendar picker, with a tap-to-jump year list |
 | `components/TimeSelect.tsx` | 15-minute time list |
 | `components/MajorSelect.tsx` | major picker (`types/user.ts`'s `MAJOR_OPTIONS`) with an "Other" free-text escape hatch |
+| `components/CollapsibleSection.tsx` | header-only collapsible toggle (title, count badge, chevron) for a `SectionList`'s `renderSectionHeader` — always controlled, doesn't wrap children |
 | `types/event.ts` | event categories and their point values |
 | `utils/date.ts` | timestamp formatting and form parsing |
 | `utils/qrPayload.ts` | check-in vs check-out QR payloads |
@@ -149,6 +150,14 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   works even when the doc doesn't exist yet. If anything ever writes a check-in
   under a different ID scheme, reads break for that member — silently, since
   writes still succeed.
+- **Past-event lists (`events.tsx`, `organizer.tsx`) use `SectionList`, not
+  `ScrollView` + `.map()`.** Both used to mount every past card at once on
+  expand; at real chapter history (~100+ events) that's real lag.
+  `organizer.tsx`'s per-event attendance count is fetched inside each card's
+  own mount effect, not by the parent looping over the whole list — that's
+  what keeps the Firestore read count tied to what's actually scrolled into
+  view instead of the total event count ever created. Don't move that fetch
+  back up to an expand-time loop without re-reading why it moved.
 
 ## Conventions
 
@@ -210,17 +219,9 @@ Windows / PowerShell:
 - `TimeSelect` opens at midnight when nothing is selected, so picking an evening
   time is a long scroll — and AM/PM entries look alike. A sensible default would
   help.
-- **Organizer's Past Events section doesn't scale.** It renders every past
-  event via `.map()` inside a `ScrollView` (no virtualization), and expanding
-  the section fires one `getCountFromServer` attendance-count query per event
-  in the list, all at once. Fine today; at a year or two of history (~100+
-  events) this will visibly lag and hammer Firestore with reads for cards
-  nobody's scrolled to yet. Fix is two parts: switch to a virtualized list
-  (`FlatList`, which means restructuring the screen off one big `ScrollView`),
-  and fire the count query per-card as it mounts rather than for the whole
-  list on expand. Grouping past events by month is a separate, UX-only
-  follow-up on top of that — worth doing, but the render/read fix is the part
-  that actually prevents the app from getting slow.
+- Past events on `events.tsx`/`organizer.tsx` still show as one flat list —
+  grouping by month would help browsing once there's real history, but isn't
+  needed for performance (see below, that part's fixed).
 
 ### Planned
 
