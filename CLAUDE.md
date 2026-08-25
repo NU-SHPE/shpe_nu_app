@@ -204,12 +204,23 @@ Windows / PowerShell:
   that the person owns the address. Until this exists, "Northwestern students
   only" isn't actually true — anyone can type an address they don't own.
 - No UI for creating announcements; they're still hand-written in the console.
-- `app.json` still names the app `frontend`, and points at Android icon files
-  that don't exist.
-- `assets/images/UIC-SHPE-Webapp.png` is unreferenced.
+- `assets/images/UIC-SHPE-Webapp.png` is now fully unreferenced (real
+  Northwestern branding replaced it everywhere — see `nu_shpe_logo.png` and
+  the generated icon/splash files) and safe to delete whenever.
 - `TimeSelect` opens at midnight when nothing is selected, so picking an evening
   time is a long scroll — and AM/PM entries look alike. A sensible default would
   help.
+- **Organizer's Past Events section doesn't scale.** It renders every past
+  event via `.map()` inside a `ScrollView` (no virtualization), and expanding
+  the section fires one `getCountFromServer` attendance-count query per event
+  in the list, all at once. Fine today; at a year or two of history (~100+
+  events) this will visibly lag and hammer Firestore with reads for cards
+  nobody's scrolled to yet. Fix is two parts: switch to a virtualized list
+  (`FlatList`, which means restructuring the screen off one big `ScrollView`),
+  and fire the count query per-card as it mounts rather than for the whole
+  list on expand. Grouping past events by month is a separate, UX-only
+  follow-up on top of that — worth doing, but the render/read fix is the part
+  that actually prevents the app from getting slow.
 
 ### Planned
 
@@ -217,6 +228,11 @@ Windows / PowerShell:
   secretary run points analysis, or exec create events. Needs an admin-facing
   users screen to manage them. Three separate wishes all reduce to this.
 - **Points / membership page** with analysis tools for officers.
+- **Points leaderboard**, matching the chapter website's existing one. Data's
+  already there — same per-member sum used on the profile page
+  (`pointsAwarded + checkOutPointsAwarded` across a member's `checkIns`
+  docs) — this is a ranking/display feature on top of it, not a new data
+  model.
 - **Completion bonus.** Points are split evenly between check-in and check-out,
   so partial attendance earns half. An even split can't distinguish leaving
   early from arriving late — weighting either half rewards the other behavior.
