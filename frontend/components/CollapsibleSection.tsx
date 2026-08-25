@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing } from './theme';
@@ -6,55 +6,34 @@ import { colors, fontSize, spacing } from './theme';
 interface Props {
   title: string;
   count: number;
-  /** Starting state when uncontrolled. Defaults closed — that's the point. */
-  defaultExpanded?: boolean;
-  /** Pass both to control expansion from the parent (e.g. to trigger a fetch on first open). */
-  expanded?: boolean;
-  onToggle?: (next: boolean) => void;
-  children: React.ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
 }
 
 /**
- * Toggle chrome only — title, count badge, chevron. Item rendering stays with
- * the caller: events.tsx and organizer.tsx render different card shapes, so a
- * renderItem prop would just be indirection over passing children.
+ * Header chrome only — title, count badge, chevron. Both consumers
+ * (events.tsx, organizer.tsx) render this via SectionList's
+ * renderSectionHeader; the section's own `data` array controls whether rows
+ * actually render (empty when collapsed), so this component doesn't wrap or
+ * hide children itself — just the toggle control.
  */
-export function CollapsibleSection({
-  title,
-  count,
-  defaultExpanded = false,
-  expanded: controlledExpanded,
-  onToggle,
-  children,
-}: Props) {
-  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
-  const expanded = controlledExpanded ?? internalExpanded;
-
-  const toggle = () => {
-    const next = !expanded;
-    if (onToggle) onToggle(next);
-    if (controlledExpanded === undefined) setInternalExpanded(next);
-  };
-
+export function CollapsibleSection({ title, count, expanded, onToggle }: Props) {
   if (count === 0) return null;
 
   return (
-    <View>
-      <TouchableOpacity style={styles.header} onPress={toggle} activeOpacity={0.7}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{title}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count}</Text>
-          </View>
+    <TouchableOpacity style={styles.header} onPress={onToggle} activeOpacity={0.7}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>{title}</Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{count}</Text>
         </View>
-        <Ionicons
-          name={expanded ? 'chevron-down' : 'chevron-forward'}
-          size={20}
-          color={colors.textMuted}
-        />
-      </TouchableOpacity>
-      {expanded ? <View style={styles.content}>{children}</View> : null}
-    </View>
+      </View>
+      <Ionicons
+        name={expanded ? 'chevron-down' : 'chevron-forward'}
+        size={20}
+        color={colors.textMuted}
+      />
+    </TouchableOpacity>
   );
 }
 
@@ -87,8 +66,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.label,
     fontWeight: '600',
     color: colors.textMuted,
-  },
-  content: {
-    marginTop: spacing.xs,
   },
 });

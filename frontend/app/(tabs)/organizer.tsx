@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,6 +17,60 @@ import { ActionButton } from '../../components/ActionButton';
 import { CollapsibleSection } from '../../components/CollapsibleSection';
 import { categoryLabel } from '../../types/event';
 import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
+
+function PastEventCard({
+  ev,
+  isAdmin,
+  canManage,
+  count,
+  onNeedCount,
+  onEdit,
+}: {
+  ev: any;
+  isAdmin: boolean;
+  canManage: boolean;
+  count: number | undefined;
+  onNeedCount: (eventId: string) => void;
+  onEdit: () => void;
+}) {
+  useEffect(() => {
+    if (isAdmin && count === undefined) onNeedCount(ev.id);
+  }, [ev.id, isAdmin, count]);
+
+  const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
+  const category = categoryLabel(ev.category);
+
+  return (
+    <View style={[styles.card, styles.pastCard]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
+        <Text style={styles.cardInfo}>
+          {formatEventDate(ev.startsAt)}
+          {timeStr ? ` · ${timeStr}` : ''}
+        </Text>
+        <Text style={styles.cardLocation}>
+          {[ev.location, category].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      <View style={styles.pastCardActions}>
+        {isAdmin ? (
+          <View style={styles.attendanceBadge}>
+            <Ionicons name="people" size={14} color="#666" />
+            <Text style={styles.attendanceBadgeText}>{count === undefined ? '…' : count}</Text>
+          </View>
+        ) : null}
+        {canManage ? (
+          <TouchableOpacity
+            style={[styles.qrButton, styles.qrButtonEdit, styles.pastEditButton]}
+            onPress={onEdit}
+          >
+            <Ionicons name="pencil" size={18} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
+}
 
 export default function OrganizerScreen() {
   const router = useRouter();
@@ -58,39 +112,28 @@ export default function OrganizerScreen() {
   );
 
   // Lazy, aggregation-based, and admin-only: firestore.rules only grants
-  // checkIns read to isAdmin(), not isExec(), and firing this eagerly for
-  // every past event on every mount would scale with all-time event count
-  // rather than with whether anyone ever opens the section. Fired once, the
-  // first time Past Events expands; cached by eventId so re-collapsing
-  // doesn't refetch.
-  const handlePastToggle = (next: boolean) => {
-    setPastExpanded(next);
-    if (!next || profile?.isAdmin !== true) return;
-
-    const missing = pastEvents.filter((ev) => !(ev.id in attendanceCounts));
-    if (missing.length === 0) return;
-
-    Promise.all(
-      missing.map(async (ev) => {
-        try {
-          const snap = await getCountFromServer(
-            query(collection(db, 'checkIns'), where('eventId', '==', ev.id)),
-          );
-          return [ev.id, snap.data().count] as const;
-        } catch (error) {
-          console.error('Error loading attendance count:', error);
-          return null;
-        }
-      }),
-    ).then((results) => {
-      setAttendanceCounts((prev) => {
-        const next = { ...prev };
-        for (const result of results) {
-          if (result) next[result[0]] = result[1];
-        }
-        return next;
+  // checkIns read to isAdmin(), not isExec(). Each past card requests its
+  // own count on mount (see PastEventCard below) instead of the parent
+  // firing every query at once on expand — SectionList only mounts the
+  // visible window regardless of how many past events exist in total, so
+  // the read count tracks what's actually scrolled into view. The in-flight
+  // guard stops a row re-rendering mid-fetch from firing a duplicate
+  // request for the same event; the cache itself lives here so a recycled
+  // (unmounted then remounted) row doesn't refetch what it already has.
+  const inFlightRef = useRef<Set<string>>(new Set());
+  const requestAttendanceCount = (eventId: string) => {
+    if (inFlightRef.current.has(eventId)) return;
+    inFlightRef.current.add(eventId);
+    getCountFromServer(query(collection(db, 'checkIns'), where('eventId', '==', eventId)))
+      .then((snap) => {
+        setAttendanceCounts((prev) => ({ ...prev, [eventId]: snap.data().count }));
+      })
+      .catch((error) => {
+        console.error('Error loading attendance count:', error);
+      })
+      .finally(() => {
+        inFlightRef.current.delete(eventId);
       });
-    });
   };
 
   if (!profileLoading && profile && !canAccessOrganizer) {
@@ -105,6 +148,11 @@ export default function OrganizerScreen() {
     );
   }
 
+  const sections = [
+    { key: 'active', data: activeEvents },
+    { key: 'past', data: pastExpanded ? pastEvents : [] },
+  ];
+
   return (
     <View style={styles.container}>
       <PageHeader
@@ -112,133 +160,116 @@ export default function OrganizerScreen() {
         subtitle="Show the check-in code when an event starts, check-out when it ends"
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.actionsRow}>
-          <ActionButton
-            icon="add-circle"
-            label="Create Event"
-            onPress={() => router.push('/organizer/create-event')}
-          />
-          {/* Post Announcement goes here next. */}
-          {profile?.isAdmin === true ? (
-            <ActionButton
-              icon="people-circle"
-              label="Manage Roles"
-              onPress={() => router.push('/organizer/manage-roles')}
-            />
-          ) : (
-            <View style={styles.actionSpacer} />
-          )}
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#D50032" />
         </View>
-
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#D50032" />
-          </View>
-        ) : (
-          <>
-            {activeEvents.length === 0 ? (
-              <Text style={styles.emptyText}>No events yet.</Text>
-            ) : (
-              activeEvents.map((ev) => {
-                const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
-                const category = categoryLabel(ev.category);
-                return (
-                  <View key={ev.id} style={styles.card}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
-                      <Text style={styles.cardInfo}>
-                        {formatEventDate(ev.startsAt)}
-                        {timeStr ? ` · ${timeStr}` : ''}
-                      </Text>
-                      <Text style={styles.cardLocation}>
-                        {[ev.location, category].filter(Boolean).join(' · ')}
-                      </Text>
-                    </View>
-                    <View style={styles.qrButtonRow}>
-                      <TouchableOpacity
-                        style={styles.qrButton}
-                        onPress={() => router.push(`/organizer/qr/${ev.id}`)}
-                      >
-                        <Ionicons name="log-in" size={22} color="#fff" />
-                      </TouchableOpacity>
-
-                      {ev.checkOutPoints > 0 ? (
-                        <TouchableOpacity
-                          style={[styles.qrButton, styles.qrButtonOut]}
-                          onPress={() => router.push(`/organizer/qr/${ev.id}?mode=out`)}
-                        >
-                          <Ionicons name="log-out" size={22} color="#fff" />
-                        </TouchableOpacity>
-                      ) : null}
-
-                      {canManageEvent(ev) ? (
-                        <TouchableOpacity
-                          style={[styles.qrButton, styles.qrButtonEdit]}
-                          onPress={() => router.push(`/organizer/edit-event/${ev.id}`)}
-                        >
-                          <Ionicons name="pencil" size={20} color="#fff" />
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  </View>
-                );
-              })
-            )}
-
-            {pastEvents.length > 0 ? (
+      ) : (
+        <SectionList
+          contentContainerStyle={styles.scrollContent}
+          stickySectionHeadersEnabled={false}
+          keyExtractor={(item) => item.id}
+          sections={sections}
+          ListHeaderComponent={
+            <View style={styles.actionsRow}>
+              <ActionButton
+                icon="add-circle"
+                label="Create Event"
+                onPress={() => router.push('/organizer/create-event')}
+              />
+              {/* Post Announcement goes here next. */}
+              {profile?.isAdmin === true ? (
+                <ActionButton
+                  icon="people-circle"
+                  label="Manage Roles"
+                  onPress={() => router.push('/organizer/manage-roles')}
+                />
+              ) : (
+                <View style={styles.actionSpacer} />
+              )}
+            </View>
+          }
+          renderSectionHeader={({ section }) => {
+            if (section.key === 'active') {
+              return (
+                <>
+                  <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                  {activeEvents.length === 0 ? (
+                    <Text style={styles.emptyText}>No events yet.</Text>
+                  ) : null}
+                </>
+              );
+            }
+            return (
               <View style={styles.pastSection}>
                 <CollapsibleSection
                   title="Past Events"
                   count={pastEvents.length}
                   expanded={pastExpanded}
-                  onToggle={handlePastToggle}
-                >
-                  {pastEvents.map((ev) => {
-                    const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
-                    const category = categoryLabel(ev.category);
-                    const count = attendanceCounts[ev.id];
-                    return (
-                      <View key={ev.id} style={[styles.card, styles.pastCard]}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
-                          <Text style={styles.cardInfo}>
-                            {formatEventDate(ev.startsAt)}
-                            {timeStr ? ` · ${timeStr}` : ''}
-                          </Text>
-                          <Text style={styles.cardLocation}>
-                            {[ev.location, category].filter(Boolean).join(' · ')}
-                          </Text>
-                        </View>
-                        <View style={styles.pastCardActions}>
-                          {profile?.isAdmin === true ? (
-                            <View style={styles.attendanceBadge}>
-                              <Ionicons name="people" size={14} color="#666" />
-                              <Text style={styles.attendanceBadgeText}>
-                                {count === undefined ? '…' : count}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {canManageEvent(ev) ? (
-                            <TouchableOpacity
-                              style={[styles.qrButton, styles.qrButtonEdit, styles.pastEditButton]}
-                              onPress={() => router.push(`/organizer/edit-event/${ev.id}`)}
-                            >
-                              <Ionicons name="pencil" size={18} color="#fff" />
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
-                      </View>
-                    );
-                  })}
-                </CollapsibleSection>
+                  onToggle={() => setPastExpanded(!pastExpanded)}
+                />
               </View>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
+            );
+          }}
+          renderItem={({ item: ev, section }) => {
+            if (section.key === 'past') {
+              return (
+                <PastEventCard
+                  ev={ev}
+                  isAdmin={profile?.isAdmin === true}
+                  canManage={canManageEvent(ev)}
+                  count={attendanceCounts[ev.id]}
+                  onNeedCount={requestAttendanceCount}
+                  onEdit={() => router.push(`/organizer/edit-event/${ev.id}`)}
+                />
+              );
+            }
+
+            const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
+            const category = categoryLabel(ev.category);
+            return (
+              <View style={styles.card}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{ev.title ?? 'Untitled Event'}</Text>
+                  <Text style={styles.cardInfo}>
+                    {formatEventDate(ev.startsAt)}
+                    {timeStr ? ` · ${timeStr}` : ''}
+                  </Text>
+                  <Text style={styles.cardLocation}>
+                    {[ev.location, category].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <View style={styles.qrButtonRow}>
+                  <TouchableOpacity
+                    style={styles.qrButton}
+                    onPress={() => router.push(`/organizer/qr/${ev.id}`)}
+                  >
+                    <Ionicons name="log-in" size={22} color="#fff" />
+                  </TouchableOpacity>
+
+                  {ev.checkOutPoints > 0 ? (
+                    <TouchableOpacity
+                      style={[styles.qrButton, styles.qrButtonOut]}
+                      onPress={() => router.push(`/organizer/qr/${ev.id}?mode=out`)}
+                    >
+                      <Ionicons name="log-out" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {canManageEvent(ev) ? (
+                    <TouchableOpacity
+                      style={[styles.qrButton, styles.qrButtonEdit]}
+                      onPress={() => router.push(`/organizer/edit-event/${ev.id}`)}
+                    >
+                      <Ionicons name="pencil" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            );
+          }}
+        />
+      )}
     </View>
   );
 }

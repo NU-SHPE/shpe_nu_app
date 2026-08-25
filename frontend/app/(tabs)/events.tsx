@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
@@ -16,6 +16,7 @@ export default function EventPage() {
   const [loading, setLoading] = useState(true);
   const [myEventIds, setMyEventIds] = useState<Set<string>>(new Set());
   const [showMineOnly, setShowMineOnly] = useState(false);
+  const [pastExpanded, setPastExpanded] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('startsAt', 'asc'));
@@ -59,7 +60,6 @@ export default function EventPage() {
     const timeStr = formatTimeRange(ev.startsAt, ev.endsAt);
     return (
       <TouchableOpacity
-        key={ev.id}
         style={styles.card}
         onPress={() => router.push(`/events-info/${ev.id}`)}
       >
@@ -81,6 +81,11 @@ export default function EventPage() {
       </TouchableOpacity>
     );
   };
+
+  const sections = [
+    { key: 'upcoming', data: upcoming },
+    { key: 'past', data: pastExpanded ? past : [] },
+  ];
 
   return (
     <View style={styles.container}>
@@ -105,31 +110,40 @@ export default function EventPage() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.eventList}>
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#D40032" />
-          </View>
-        ) : (
-          <>
-            {upcoming.length === 0 ? (
-              <Text style={[styles.desc, { marginHorizontal: 20 }]}>
-                {showMineOnly ? "You haven't RSVPed to any events yet." : 'No upcoming events.'}
-              </Text>
-            ) : (
-              upcoming.map(renderEventCard)
-            )}
-
-            {past.length > 0 ? (
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#D40032" />
+        </View>
+      ) : (
+        <SectionList
+          style={styles.scroll}
+          contentContainerStyle={styles.eventList}
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          stickySectionHeadersEnabled={false}
+          renderItem={({ item }) => renderEventCard(item)}
+          renderSectionHeader={({ section }) => {
+            if (section.key === 'upcoming') {
+              if (upcoming.length > 0) return null;
+              return (
+                <Text style={[styles.desc, { marginHorizontal: 20 }]}>
+                  {showMineOnly ? "You haven't RSVPed to any events yet." : 'No upcoming events.'}
+                </Text>
+              );
+            }
+            return (
               <View style={styles.pastSection}>
-                <CollapsibleSection title="Past Events" count={past.length}>
-                  {past.map(renderEventCard)}
-                </CollapsibleSection>
+                <CollapsibleSection
+                  title="Past Events"
+                  count={past.length}
+                  expanded={pastExpanded}
+                  onToggle={() => setPastExpanded(!pastExpanded)}
+                />
               </View>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
+            );
+          }}
+        />
+      )}
     </View>
   );
 }
