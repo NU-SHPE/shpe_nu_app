@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     // Exec: create events, run check-in/out QR codes, post announcements.
-    // Granted by an admin from the roles screen, never self-service — see the
+    // Granted by an admin from Manage Users, never self-service — see the
     // isExec-only update rule below.
     function isExec() {
       return isSignedIn()
@@ -22,11 +22,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isExec == true;
     }
 
-    // Users can read any profile, but only write their own. New users must be
+    // Users can read their own profile, or any profile if they're an admin
+    // (the Manage Users roster). Only write their own. New users must be
     // created with isAdmin and isExec both false, and users cannot toggle
     // either on themselves.
     match /users/{uid} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
 
       allow create: if isSignedIn()
         && request.auth.uid == uid
@@ -38,7 +39,7 @@ service cloud.firestore {
         && request.resource.data.isAdmin == resource.data.isAdmin
         && request.resource.data.isExec == resource.data.isExec;
 
-      // The roles screen: an admin may flip isExec on any user, and nothing
+      // Manage Users: an admin may flip isExec on any user, and nothing
       // else — isAdmin itself stays console-only, same as before.
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isExec']);

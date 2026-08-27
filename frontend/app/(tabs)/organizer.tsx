@@ -181,8 +181,8 @@ export default function OrganizerScreen() {
               {profile?.isAdmin === true ? (
                 <ActionButton
                   icon="people-circle"
-                  label="Manage Roles"
-                  onPress={() => router.push('/organizer/manage-roles')}
+                  label="Manage Users"
+                  onPress={() => router.push('/organizer/manage-users')}
                 />
               ) : (
                 <View style={styles.actionSpacer} />

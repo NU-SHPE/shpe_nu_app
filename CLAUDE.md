@@ -50,6 +50,7 @@ firebase deploy --only firestore:rules
 | `components/TimeSelect.tsx` | 15-minute time list |
 | `components/MajorSelect.tsx` | major picker (`types/user.ts`'s `MAJOR_OPTIONS`) with an "Other" free-text escape hatch |
 | `components/CollapsibleSection.tsx` | header-only collapsible toggle (title, count badge, chevron) for a `SectionList`'s `renderSectionHeader` — always controlled, doesn't wrap children |
+| `hooks/useNow.ts` | a `Date` that refreshes every 60s — use with `isEventPast` anywhere "has this event ended" needs to stay correct while a screen just sits open, not only when the underlying data changes |
 | `types/event.ts` | event categories and their point values |
 | `utils/date.ts` | timestamp formatting and form parsing |
 | `utils/qrPayload.ts` | check-in vs check-out QR payloads |
@@ -158,6 +159,13 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   what keeps the Firestore read count tied to what's actually scrolled into
   view instead of the total event count ever created. Don't move that fetch
   back up to an expand-time loop without re-reading why it moved.
+- **`isEventPast` needs a live clock, not `new Date()` inline.** Calling it
+  bare re-evaluates only when the component re-renders for some other
+  reason (a Firestore update), not when the real-world clock actually
+  passes the event's end time — a screen left open can show an event as
+  active long after it's ended, with nothing wrong in the data. Pass
+  `useNow()`'s value in as the second argument anywhere this matters
+  (`events.tsx`, `organizer.tsx`, `events-info/[id].tsx` all do).
 
 ## Conventions
 
@@ -170,7 +178,7 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   pattern (a `validate()` returning per-field errors, plus a `formError`
   banner for anything not tied to one field). Screens that still call
   `Alert.alert` for anything user-facing (`create-event.tsx`'s save-failure
-  path, `manage-roles.tsx`, `profile.tsx`'s sign-out failure) haven't been
+  path, `manage-users.tsx`, `profile.tsx`'s sign-out failure) haven't been
   converted yet.
 - **The QR scanner guard is a ref, not state.** The camera fires many times per
   second; async state updates can't keep up. It's a time-based cooldown so it
@@ -205,50 +213,76 @@ Windows / PowerShell:
 
 ### Known gaps
 
-- **Scan windows are client-side only.** `utils/scanWindow.ts` enforces them in
-  the app, but the rules don't, so a request outside the window would still be
-  accepted. It awards the correct points either way, so this is an integrity
-  nuisance rather than a way to farm points.
+- **Scan windows and points are enforced client-side only, by deliberate
+  choice.** `utils/scanWindow.ts` enforces the 30-min-before-start /
+  midpoint / 30-min-after-end windows in the app, but the rules don't, so a
+  request outside the window would still be accepted at the Firestore
+  level. Considered and explicitly deferred — it's an integrity nuisance,
+  not a way to farm extra points (the amount awarded is fixed either way),
+  and not worth the added complexity right now.
 - **No email verification**, so the domain check only validates the string, not
   that the person owns the address. Until this exists, "Northwestern students
   only" isn't actually true — anyone can type an address they don't own.
+  Confirmed worth building; not done yet.
 - No UI for creating announcements; they're still hand-written in the console.
+  Confirmed worth building, push notifications included — see Planned.
 - `assets/images/UIC-SHPE-Webapp.png` is now fully unreferenced (real
   Northwestern branding replaced it everywhere — see `nu_shpe_logo.png` and
   the generated icon/splash files) and safe to delete whenever.
-- `TimeSelect` opens at midnight when nothing is selected, so picking an evening
-  time is a long scroll — and AM/PM entries look alike. A sensible default would
-  help.
 - Past events on `events.tsx`/`organizer.tsx` still show as one flat list —
   grouping by month would help browsing once there's real history, but isn't
   needed for performance (see below, that part's fixed).
+- **`manage-users.tsx` loads the entire `checkIns` collection into memory
+  on open**, to compute every member's point total in one query instead of
+  one-per-member (Firestore's aggregation queries can count docs but can't
+  sum a field, so there's no cheaper option that still shows a real total).
+  Deliberately accepted for now — check-in docs are small and this is one
+  query fired only when an admin opens this specific page, not on every
+  app load. Revisit if the chapter's total historical check-in volume ever
+  gets large (tens of thousands, not the low thousands a few years of a
+  chapter this size would realistically produce).
 
 ### Planned
 
-- **Roles beyond `isAdmin`.** Admins granting access to exec — e.g. letting the
-  secretary run points analysis, or exec create events. Needs an admin-facing
-  users screen to manage them. Three separate wishes all reduce to this.
-- **Points / membership page** with analysis tools for officers.
+- **Roles beyond `isAdmin`/`isExec`.** Explicitly deferred — chapter is
+  staying with just these two roles for now. Revisit only if a real need
+  for a narrower role (e.g. secretary-only analytics access) comes up.
 - **Points leaderboard**, matching the chapter website's existing one. Data's
-  already there — same per-member sum used on the profile page
-  (`pointsAwarded + checkOutPointsAwarded` across a member's `checkIns`
-  docs) — this is a ranking/display feature on top of it, not a new data
-  model.
+  already there — same per-member sum used on the profile page and
+  `manage-users.tsx` (`pointsAwarded + checkOutPointsAwarded` across a
+  member's `checkIns` docs) — this is a ranking/display feature on top of
+  it, not a new data model. No opt-out when it's built — chapter-members-only
+  data, not public. Explicitly deferred for now, not pressing.
+- **Member-to-member visibility** ("who else is in this club" — an
+  aesthetic/social feature, not a functional need). `manage-users.tsx`
+  gave admins a full-profile roster; if members ever get to see each other
+  too, that should be a small, deliberately-scoped subset of fields (name,
+  major) exposed through its own rule, never reopening the blanket
+  `users` read that existed before this session tightened it to
+  self-or-admin. Purely a future idea, not committed to.
 - **Completion bonus.** Points are split evenly between check-in and check-out,
   so partial attendance earns half. An even split can't distinguish leaving
   early from arriving late — weighting either half rewards the other behavior.
   The fix is equal halves plus a bonus for having both, which makes full
-  attendance worth meaningfully more than either half. Deferred; it needs a
-  `completionBonus` field on events and the second scan to award it.
-- **Whether exec should earn points at their own events.** Easier for them to
-  collect the completion bonus at an event they're running. Policy question, not
-  a technical one — events already store `createdBy`, so it's enforceable
-  whenever the chapter decides.
-- **Announcements**, with push notifications.
-- **"Add to Calendar"** on the event detail page — generates a calendar link
-  from `startsAt`/`endsAt`, no backend needed.
-- **MentorSHPE points** — 1/meeting as a mentee, 1 per mentee for mentors,
-  capped at 6 a quarter. Deliberately not an event category; needs its own
-  model.
-- **Google Calendar sync** for chapter events. Needs a Cloud Function and a
-  service account, which means the Firebase Blaze plan.
+  attendance worth meaningfully more than either half. Deferred — chapter
+  wants to discuss with exec first before building it.
+- **Announcements**, with push notifications. Confirmed, next up. Exec
+  should only be able to edit/delete announcements they posted themselves
+  (same `createdBy`-pinned pattern already used for events); admin can
+  manage any. Push notifications don't need App Store/Play Store presence
+  to work — they need a real native build (EAS), which this project
+  already has.
+- **MentorSHPE points** — deferred for now. Longer-term idea if it happens:
+  not a manual point entry, but its own mentor/mentee role pair, each
+  mentor with their own dedicated QR code, mentees scanning it the same
+  way event check-in already works.
+- **Google Calendar sync** for chapter events, into the chapter's existing
+  shared calendar. Considered and deferred — needs this app's first-ever
+  backend (a Cloud Function holding a service-account credential, since
+  that credential can never safely live in the mobile app itself) and the
+  Blaze plan. Realistically ~$0/month at chapter traffic levels (Blaze
+  unlocks the *ability* to make external API calls at all, which the free
+  plan blocks outright — it's not primarily a usage-based cost at this
+  scale), but still a real architecture change, not a quick add. The
+  small, no-backend "Add to Calendar" personal button is already built —
+  this is the separate, heavier, org-wide version of that idea.
