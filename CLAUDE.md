@@ -75,8 +75,9 @@ Collections are created implicitly on first write. No schema, no SQL.
 | `users` | registration, keyed by Auth UID — never hand-create |
 | `events` | the Create Event form (organizer tab) |
 | `checkIns` | scanning an event QR, id `{uid}_{eventId}` |
-| `announcements` | by hand in the console — no UI yet |
+| `announcements` | the Post Announcement form (organizer tab) |
 | `rsvps` | tapping RSVP on the event detail page, id `{uid}_{eventId}` |
+| `pushTokens` | registered automatically on sign-in, id = uid — see `AuthContext.tsx` |
 
 ```
 events         title, description, location, category, checkInPoints,
@@ -86,8 +87,9 @@ users          firstName, lastName, birthday, sexAtBirth, gender, pronouns,
                isExec, createdAt
 checkIns       userId, eventId, checkedInAt, pointsAwarded,
                checkedOutAt?, checkOutPointsAwarded?
-announcements  title, body, time, createdAt
+announcements  title, body, createdAt, createdBy, createdByName
 rsvps          userId, eventId, rsvpedAt
+pushTokens     token, updatedAt
 ```
 
 ### Check-in / check-out
@@ -224,8 +226,6 @@ Windows / PowerShell:
   that the person owns the address. Until this exists, "Northwestern students
   only" isn't actually true — anyone can type an address they don't own.
   Confirmed worth building; not done yet.
-- No UI for creating announcements; they're still hand-written in the console.
-  Confirmed worth building, push notifications included — see Planned.
 - `assets/images/UIC-SHPE-Webapp.png` is now fully unreferenced (real
   Northwestern branding replaced it everywhere — see `nu_shpe_logo.png` and
   the generated icon/splash files) and safe to delete whenever.
@@ -266,12 +266,6 @@ Windows / PowerShell:
   The fix is equal halves plus a bonus for having both, which makes full
   attendance worth meaningfully more than either half. Deferred — chapter
   wants to discuss with exec first before building it.
-- **Announcements**, with push notifications. Confirmed, next up. Exec
-  should only be able to edit/delete announcements they posted themselves
-  (same `createdBy`-pinned pattern already used for events); admin can
-  manage any. Push notifications don't need App Store/Play Store presence
-  to work — they need a real native build (EAS), which this project
-  already has.
 - **MentorSHPE points** — deferred for now. Longer-term idea if it happens:
   not a manual point entry, but its own mentor/mentee role pair, each
   mentor with their own dedicated QR code, mentees scanning it the same
