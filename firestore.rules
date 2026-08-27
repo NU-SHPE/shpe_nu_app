@@ -63,11 +63,29 @@ service cloud.firestore {
         || (isExec() && resource.data.createdBy == request.auth.uid);
     }
 
-    // Announcements are readable by any authenticated user; admins and exec
-    // can write.
+    // Announcements are readable by any authenticated user. Admins and exec
+    // can create; admins can edit or delete any, exec only their own --
+    // same ownership pattern as events.
     match /announcements/{id} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || isExec();
+      allow create: if (isAdmin() || isExec())
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAdmin()
+        || (isExec()
+            && resource.data.createdBy == request.auth.uid
+            && request.resource.data.createdBy == resource.data.createdBy);
+      allow delete: if isAdmin()
+        || (isExec() && resource.data.createdBy == request.auth.uid);
+    }
+
+    // Push tokens: one doc per member, keyed by uid, holding just their most
+    // recent device's Expo push token -- nothing else about the person.
+    // Deliberately its own collection, separate from `users`, so exec (who
+    // can post announcements) can read what's needed to send a push without
+    // also being able to read anyone's profile data.
+    match /pushTokens/{uid} {
+      allow read: if isAdmin() || isExec();
+      allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Check-ins: a user can create only their own record and read only their

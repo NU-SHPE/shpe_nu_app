@@ -177,7 +177,11 @@ export default function OrganizerScreen() {
                 label="Create Event"
                 onPress={() => router.push('/organizer/create-event')}
               />
-              {/* Post Announcement goes here next. */}
+              <ActionButton
+                icon="megaphone"
+                label="Post Announcement"
+                onPress={() => router.push('/organizer/create-announcement')}
+              />
               {profile?.isAdmin === true ? (
                 <ActionButton
                   icon="people-circle"

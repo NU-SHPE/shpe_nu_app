@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
+import { formatRelativeTime } from '../../utils/date';
 
 function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
   return (
@@ -20,24 +21,29 @@ function ActionButton({ icon, label, onPress } : { icon: any; label: string; onP
 
 export default function Index() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // onSnapshot, not getDocs: this tab stays mounted like every other tab in
+  // the app, so a one-time fetch would show stale announcements forever
+  // once one gets posted, edited, or deleted while this screen isn't active.
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
-        setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error('Error fetching announcements:', error);
-      } finally {
+    const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        setAnnouncements(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
         setLoading(false);
-      }
-    };
-    fetchAnnouncements();
+      },
+      (error) => {
+        console.error('Error loading announcements:', error);
+        setLoading(false);
+      },
+    );
   }, []);
+
+  const canManage = (a: any) => profile?.isAdmin === true || a.createdBy === user?.uid;
 
   return (
     <View style={styles.container}>
@@ -61,14 +67,25 @@ export default function Index() {
           <Text style={[styles.cardBody, { textAlign: 'center', marginTop: 8 }]}>No announcements yet.</Text>
         ) : (
           announcements.map((a) => (
-            <TouchableOpacity key={a.id} style={styles.card}>
+            <View key={a.id} style={styles.card}>
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{a.title}</Text>
                 <Text style={styles.cardBody}>{a.body}</Text>
-                <Text style={styles.cardTime}>{a.time}</Text>
+                <Text style={styles.cardTime}>
+                  {[formatRelativeTime(a.createdAt) || a.time, a.createdByName && `Posted by ${a.createdByName}`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
+              {canManage(a) ? (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => router.push(`/organizer/edit-announcement/${a.id}`)}
+                >
+                  <Ionicons name="pencil" size={16} color="#fff" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ))
         )}
       </ScrollView>
@@ -163,5 +180,13 @@ const styles = StyleSheet.create({
   cardTime: {
     fontSize: 12,
     color: '#999',
+  },
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#6b7280',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
