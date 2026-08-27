@@ -17,6 +17,7 @@ import { ActionButton } from '../../components/ActionButton';
 import { CollapsibleSection } from '../../components/CollapsibleSection';
 import { categoryLabel } from '../../types/event';
 import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
+import { useNow } from '../../hooks/useNow';
 
 function PastEventCard({
   ev,
@@ -79,6 +80,7 @@ export default function OrganizerScreen() {
   const [loading, setLoading] = useState(true);
   const [pastExpanded, setPastExpanded] = useState(false);
   const [attendanceCounts, setAttendanceCounts] = useState<Record<string, number>>({});
+  const now = useNow();
 
   // onSnapshot, not getDocs: a one-time fetch leaves this list showing whatever
   // existed when the tab first mounted. Tabs stay mounted, so creating an event
@@ -103,12 +105,15 @@ export default function OrganizerScreen() {
   // mirrors the ownership check in firestore.rules' events update/delete rule.
   const canManageEvent = (ev: any) => profile?.isAdmin === true || ev.createdBy === user?.uid;
 
-  const activeEvents = useMemo(() => events.filter((ev) => !isEventPast(ev)), [events]);
+  const activeEvents = useMemo(
+    () => events.filter((ev) => !isEventPast(ev, now)),
+    [events, now],
+  );
   // Source query is orderBy('startsAt','asc'), so reversing gives
   // most-recent-first without a second sort pass.
   const pastEvents = useMemo(
-    () => [...events.filter((ev) => isEventPast(ev))].reverse(),
-    [events],
+    () => [...events.filter((ev) => isEventPast(ev, now))].reverse(),
+    [events, now],
   );
 
   // Lazy, aggregation-based, and admin-only: firestore.rules only grants

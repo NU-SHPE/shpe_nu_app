@@ -37,10 +37,12 @@ import {
 } from '../../../types/event';
 import { DateSelect } from '../../../components/DateSelect';
 import { TimeSelect, formatTimeLabel } from '../../../components/TimeSelect';
-import { formatEventDate, parseDateTime, toDateInput, toTimeInput, toDate } from '../../../utils/date';
+import { formatEventDate, parseEventDates, toDateInput, toTimeInput, toDate } from '../../../utils/date';
 
-type PickerTarget = 'date' | 'start' | 'end';
-type FieldErrors = Partial<Record<'title' | 'category' | 'date' | 'time' | 'location', string>>;
+type PickerTarget = 'startDate' | 'endDate' | 'start' | 'end';
+type FieldErrors = Partial<
+  Record<'title' | 'category' | 'startDate' | 'endDate' | 'time' | 'location', string>
+>;
 
 export default function EditEventScreen() {
   const router = useRouter();
@@ -53,7 +55,8 @@ export default function EditEventScreen() {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<EventCategory | undefined>();
-  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
@@ -86,10 +89,13 @@ export default function EditEventScreen() {
           const start = toDate(data.startsAt);
           const end = toDate(data.endsAt);
           if (start) {
-            setDate(toDateInput(start));
+            setStartDate(toDateInput(start));
             setStartTime(toTimeInput(start));
           }
-          if (end) setEndTime(toTimeInput(end));
+          if (end) {
+            setEndDate(toDateInput(end));
+            setEndTime(toTimeInput(end));
+          }
         }
       } catch (error) {
         console.error('Error fetching event:', error);
@@ -117,20 +123,32 @@ export default function EditEventScreen() {
       });
   }, [deleteModalVisible, eventId, profile?.isAdmin]);
 
+  // Same-day is the common case, so picking a start date carries the end
+  // date along with it -- but only while it's still following (empty, or
+  // equal to the previous start date). Once someone's deliberately set a
+  // different end date (an overnight event), changing the start date again
+  // doesn't clobber it.
+  const handleSelectStartDate = (value: string) => {
+    if (endDate === '' || endDate === startDate) setEndDate(value);
+    setStartDate(value);
+  };
+
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
     if (!title.trim()) next.title = 'Give the event a name.';
     if (!category) next.category = 'Pick a category.';
-    if (!date) next.date = 'Pick a date.';
+    if (!startDate) next.startDate = 'Pick a start date.';
+    if (!endDate) next.endDate = 'Pick an end date.';
     if (!location.trim()) next.location = 'Where is it happening?';
 
     if (!startTime || !endTime) {
       next.time = 'Pick a start and end time.';
-    } else if (date) {
-      const startsAt = parseDateTime(date, startTime);
-      const endsAt = parseDateTime(date, endTime);
-      if (!startsAt || !endsAt) next.time = 'That time looks wrong.';
-      else if (endsAt <= startsAt) next.time = 'The end time has to be after the start.';
+    } else if (startDate && endDate) {
+      const window = parseEventDates(startDate, startTime, endDate, endTime);
+      if (!window) next.time = 'That time looks wrong.';
+      else if (window.endsAt.getTime() <= window.startsAt.getTime()) {
+        next.time = 'The end has to be after the start.';
+      }
     }
     return next;
   };
@@ -142,8 +160,7 @@ export default function EditEventScreen() {
     setErrors(found);
     if (Object.keys(found).length > 0) return;
 
-    const startsAt = parseDateTime(date, startTime)!;
-    const endsAt = parseDateTime(date, endTime)!;
+    const { startsAt, endsAt } = parseEventDates(startDate, startTime, endDate, endTime)!;
     const points = EVENT_CATEGORIES[category!];
 
     setSaving(true);
@@ -260,25 +277,35 @@ export default function EditEventScreen() {
             </Text>
           ) : null}
 
-          <Text style={styles.fieldLabel}>Date</Text>
-          <TouchableOpacity style={styles.input} onPress={() => setPicker('date')}>
-            <Text style={date ? styles.inputValue : styles.inputPlaceholder}>
-              {date ? formatEventDate(new Date(`${date}T00:00:00`)) : 'Pick a date'}
-            </Text>
-          </TouchableOpacity>
-          {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
-
+          <Text style={styles.fieldLabel}>Starts</Text>
           <View style={styles.row}>
             <View style={styles.rowItem}>
-              <Text style={styles.fieldLabel}>Starts</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setPicker('startDate')}>
+                <Text style={startDate ? styles.inputValue : styles.inputPlaceholder}>
+                  {startDate ? formatEventDate(new Date(`${startDate}T00:00:00`)) : 'Pick a date'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.rowItem}>
               <TouchableOpacity style={styles.input} onPress={() => setPicker('start')}>
                 <Text style={startTime ? styles.inputValue : styles.inputPlaceholder}>
                   {startTime ? formatTimeLabel(startTime) : 'Pick a time'}
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+          {errors.startDate ? <Text style={styles.errorText}>{errors.startDate}</Text> : null}
+
+          <Text style={styles.fieldLabel}>Ends</Text>
+          <View style={styles.row}>
             <View style={styles.rowItem}>
-              <Text style={styles.fieldLabel}>Ends</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setPicker('endDate')}>
+                <Text style={endDate ? styles.inputValue : styles.inputPlaceholder}>
+                  {endDate ? formatEventDate(new Date(`${endDate}T00:00:00`)) : 'Pick a date'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.rowItem}>
               <TouchableOpacity style={styles.input} onPress={() => setPicker('end')}>
                 <Text style={endTime ? styles.inputValue : styles.inputPlaceholder}>
                   {endTime ? formatTimeLabel(endTime) : 'Pick a time'}
@@ -286,12 +313,19 @@ export default function EditEventScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          {errors.endDate ? <Text style={styles.errorText}>{errors.endDate}</Text> : null}
           {errors.time ? <Text style={styles.errorText}>{errors.time}</Text> : null}
 
           <DateSelect
-            visible={picker === 'date'}
-            value={date}
-            onSelect={setDate}
+            visible={picker === 'startDate'}
+            value={startDate}
+            onSelect={handleSelectStartDate}
+            onClose={() => setPicker(null)}
+          />
+          <DateSelect
+            visible={picker === 'endDate'}
+            value={endDate}
+            onSelect={setEndDate}
             onClose={() => setPicker(null)}
           />
           <TimeSelect

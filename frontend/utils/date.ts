@@ -25,6 +25,28 @@ export const formatEventDate = (value: unknown): string => {
   });
 };
 
+/**
+ * "5 minutes ago" / "3 hours ago" / "2 days ago" for anything recent enough
+ * that freshness is the useful signal (an announcement feed); falls back to
+ * a real date past a week, since "47 days ago" stops being meaningful long
+ * before "3 weeks ago" does.
+ */
+export const formatRelativeTime = (value: unknown): string => {
+  const date = toDate(value);
+  if (!date) return '';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  return formatEventDate(value);
+};
+
 export const formatTime = (value: unknown): string => {
   const date = toDate(value);
   if (!date) return '';
@@ -116,4 +138,24 @@ export const parseDateTime = (dateInput: string, timeInput: string): Date | null
   if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
 
   return date;
+};
+
+/**
+ * The create/edit event form has fully independent start and end
+ * date+time pairs — the normal pattern every calendar app uses. No
+ * inference, no rollover, no guessing whether something spans midnight:
+ * an overnight event is just an end date one day after the start date,
+ * picked directly. The only rule is the plain one — end has to be after
+ * start — left to the caller to check, same as any other field.
+ */
+export const parseEventDates = (
+  startDateInput: string,
+  startTimeInput: string,
+  endDateInput: string,
+  endTimeInput: string,
+): { startsAt: Date; endsAt: Date } | null => {
+  const startsAt = parseDateTime(startDateInput, startTimeInput);
+  const endsAt = parseDateTime(endDateInput, endTimeInput);
+  if (!startsAt || !endsAt) return null;
+  return { startsAt, endsAt };
 };

@@ -18,6 +18,7 @@ import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange, isEventPast, toDate } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
+import { useNow } from '../../../hooks/useNow';
 
 const NAVY = '#001E62';
 
@@ -91,7 +92,8 @@ export default function EventInfo() {
     );
   }, [id]);
 
-  const eventPast = event ? isEventPast(event) : false;
+  const now = useNow();
+  const eventPast = event ? isEventPast(event, now) : false;
 
   const toggleRsvp = async () => {
     if (!user || !id || eventPast) return;

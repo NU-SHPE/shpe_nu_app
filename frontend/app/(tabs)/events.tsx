@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
 import { CollapsibleSection } from '../../components/CollapsibleSection';
 import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
+import { useNow } from '../../hooks/useNow';
 
 export default function EventPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function EventPage() {
   const [myEventIds, setMyEventIds] = useState<Set<string>>(new Set());
   const [showMineOnly, setShowMineOnly] = useState(false);
   const [pastExpanded, setPastExpanded] = useState(false);
+  const now = useNow();
 
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('startsAt', 'asc'));
@@ -48,12 +50,15 @@ export default function EventPage() {
 
   const visibleEvents = showMineOnly ? events.filter((ev) => myEventIds.has(ev.id)) : events;
 
-  const upcoming = useMemo(() => visibleEvents.filter((ev) => !isEventPast(ev)), [visibleEvents]);
+  const upcoming = useMemo(
+    () => visibleEvents.filter((ev) => !isEventPast(ev, now)),
+    [visibleEvents, now],
+  );
   // Source query is orderBy('startsAt','asc'), so reversing the past slice
   // gives most-recent-first without a second sort pass.
   const past = useMemo(
-    () => [...visibleEvents.filter((ev) => isEventPast(ev))].reverse(),
-    [visibleEvents],
+    () => [...visibleEvents.filter((ev) => isEventPast(ev, now))].reverse(),
+    [visibleEvents, now],
   );
 
   const renderEventCard = (ev: any) => {
