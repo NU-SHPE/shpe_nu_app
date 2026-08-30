@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signOut,
   User,
 } from 'firebase/auth';
@@ -66,12 +67,26 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   profileLoading: boolean;
+  /**
+   * Whether the signed-in user has confirmed ownership of their email. Tracked
+   * as its own state because `onAuthStateChanged` does NOT refire when the
+   * flag flips -- the verify-email screen calls `reloadUser()` to pick it up.
+   */
+  emailVerified: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
     password: string,
     profile: UserProfileInput,
   ) => Promise<void>;
+  /** Re-send the verification link to the current user's address. */
+  resendVerification: () => Promise<void>;
+  /**
+   * Pull the latest user record from Firebase and, if the email just became
+   * verified, force-refresh the ID token so the `email_verified` claim the
+   * Firestore rules read is current. Returns the fresh verified state.
+   */
+  reloadUser: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -80,14 +95,19 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      setEmailVerified(firebaseUser?.emailVerified ?? false);
       setLoading(false);
-      if (firebaseUser) registerForPushNotifications(firebaseUser.uid);
+      // Hold off on push registration until the address is confirmed -- an
+      // unverified account can't get past the verify-email gate anyway, and
+      // the pushTokens write rule now requires a verified token.
+      if (firebaseUser?.emailVerified) registerForPushNotifications(firebaseUser.uid);
     });
     return unsubscribe;
   }, []);
@@ -136,6 +156,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isExec: false,
       createdAt: serverTimestamp(),
     });
+    await sendEmailVerification(credential.user);
+  };
+
+  const resendVerification = async () => {
+    if (auth.currentUser) await sendEmailVerification(auth.currentUser);
+  };
+
+  const reloadUser = async () => {
+    const current = auth.currentUser;
+    if (!current) return false;
+    await current.reload();
+    const verified = current.emailVerified;
+    // A fresh ID token so `request.auth.token.email_verified` is true for the
+    // Firestore rules -- `reload()` alone updates the user record but not the
+    // token's claims.
+    if (verified) await current.getIdToken(true);
+    setUser(current);
+    setEmailVerified(verified);
+    if (verified) registerForPushNotifications(current.uid);
+    return verified;
   };
 
   const logout = async () => {
@@ -144,7 +184,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, profileLoading, login, register, logout }}
+      value={{
+        user,
+        profile,
+        loading,
+        profileLoading,
+        emailVerified,
+        login,
+        register,
+        resendVerification,
+        reloadUser,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

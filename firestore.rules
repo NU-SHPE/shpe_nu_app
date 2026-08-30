@@ -7,8 +7,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // The account has confirmed ownership of its email address. The app blocks
+    // unverified users at the verify-email gate; this is the same check at the
+    // data layer, so "chapter emails only" holds even against a request made
+    // outside the app with a raw auth token. The claim rides on the ID token,
+    // so a user who just verified must refresh their token (the app forces
+    // this in AuthContext.reloadUser) before it reads true here.
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isAdmin() {
-      return isSignedIn()
+      return isVerified()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
@@ -17,7 +27,7 @@ service cloud.firestore {
     // Granted by an admin from Manage Users, never self-service — see the
     // isExec-only update rule below.
     function isExec() {
-      return isSignedIn()
+      return isVerified()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isExec == true;
     }
@@ -29,12 +39,15 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
 
+      // Registration writes the profile doc immediately after sign-up, before
+      // the email is verified -- so create can't require isVerified(). Editing
+      // it afterward (edit-profile) can and does.
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && request.resource.data.isAdmin == false
         && request.resource.data.isExec == false;
 
-      allow update: if isSignedIn()
+      allow update: if isVerified()
         && request.auth.uid == uid
         && request.resource.data.isAdmin == resource.data.isAdmin
         && request.resource.data.isExec == resource.data.isExec;
@@ -47,12 +60,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Events are readable by any authenticated user. Admins and exec can
+    // Events are readable by any verified member. Admins and exec can
     // create. Admins can edit or delete any event; exec can only edit or
     // delete events they created themselves — createdBy is pinned on
     // update so an exec can't reassign an event to someone else.
     match /events/{eventId} {
-      allow read: if isSignedIn();
+      allow read: if isVerified();
       allow create: if (isAdmin() || isExec())
         && request.resource.data.createdBy == request.auth.uid;
       allow update: if isAdmin()
@@ -63,11 +76,11 @@ service cloud.firestore {
         || (isExec() && resource.data.createdBy == request.auth.uid);
     }
 
-    // Announcements are readable by any authenticated user. Admins and exec
+    // Announcements are readable by any verified member. Admins and exec
     // can create; admins can edit or delete any, exec only their own --
     // same ownership pattern as events.
     match /announcements/{id} {
-      allow read: if isSignedIn();
+      allow read: if isVerified();
       allow create: if (isAdmin() || isExec())
         && request.resource.data.createdBy == request.auth.uid;
       allow update: if isAdmin()
@@ -85,7 +98,7 @@ service cloud.firestore {
     // also being able to read anyone's profile data.
     match /pushTokens/{uid} {
       allow read: if isAdmin() || isExec();
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      allow write: if isVerified() && request.auth.uid == uid;
     }
 
     // Check-ins: a user can create only their own record and read only their
@@ -102,7 +115,7 @@ service cloud.firestore {
       //
       // Neither path reveals whether someone else's check-in exists: a request
       // for another member's record is denied identically either way.
-      allow read: if isSignedIn()
+      allow read: if isVerified()
         && (id.split('_')[0] == request.auth.uid
             || (resource != null && resource.data.userId == request.auth.uid)
             || isAdmin());
@@ -115,14 +128,14 @@ service cloud.firestore {
       // Each half is only checked when it's actually present: a check-in write
       // carries pointsAwarded, a check-out write carries checkOutPointsAwarded,
       // and a merge write carries whichever half already existed.
-      allow create: if isSignedIn()
+      allow create: if isVerified()
         && request.resource.data.userId == request.auth.uid
         && pointsMatchEvent(request.resource.data);
 
       // Updates are how the second half lands (setDoc with merge). The owner
       // may add to their record but never rewrite who it belongs to, which
       // event it's for, or a timestamp that's already been set.
-      allow update: if isSignedIn()
+      allow update: if isVerified()
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.eventId == resource.data.eventId
@@ -133,19 +146,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // RSVPs: readable by any signed-in member — same trust level as events
+    // RSVPs: readable by any verified member — same trust level as events
     // and announcements, since (unlike checkIns) RSVP carries no points and
     // isn't integrity-sensitive. A member may create or delete only their
     // own RSVP, keyed by doc ID the same way checkIns is (`{uid}_{eventId}`).
     match /rsvps/{id} {
-      allow read: if isSignedIn();
+      allow read: if isVerified();
 
-      allow create: if isSignedIn()
+      allow create: if isVerified()
         && id.split('_')[0] == request.auth.uid
         && id.split('_')[1] == request.resource.data.eventId
         && request.resource.data.userId == request.auth.uid;
 
-      allow delete: if isSignedIn() && id.split('_')[0] == request.auth.uid;
+      allow delete: if isVerified() && id.split('_')[0] == request.auth.uid;
 
       allow update: if false;
     }

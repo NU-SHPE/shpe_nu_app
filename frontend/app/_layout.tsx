@@ -5,9 +5,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 const AUTH_SEGMENTS = new Set(['', 'register']);
+const VERIFY_SEGMENT = 'verify-email';
 
 function AuthGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, emailVerified } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -16,13 +17,17 @@ function AuthGate() {
 
     const currentSegment = segments[0] ?? '';
     const isAuthScreen = AUTH_SEGMENTS.has(currentSegment);
+    const isVerifyScreen = currentSegment === VERIFY_SEGMENT;
 
     if (!user && !isAuthScreen) {
       router.replace('/');
-    } else if (user && isAuthScreen) {
+    } else if (user && !emailVerified && !isVerifyScreen) {
+      // Signed in but hasn't confirmed their email -- nothing past the gate.
+      router.replace('/verify-email');
+    } else if (user && emailVerified && (isAuthScreen || isVerifyScreen)) {
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, segments]);
+  }, [user, loading, emailVerified, segments]);
 
   if (loading) {
     return (
@@ -36,6 +41,7 @@ function AuthGate() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="verify-email" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="organizer/qr/[eventId]" />
       <Stack.Screen name="organizer/create-event" />

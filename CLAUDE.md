@@ -37,7 +37,10 @@ firebase deploy --only firestore:rules
 - **Firebase** is the entire backend: Auth for credentials, Firestore for data.
   There is no server to run.
 - Auth state flows through `frontend/contexts/AuthContext.tsx`, which exposes
-  `user` (Firebase Auth) and `profile` (the Firestore `users` doc).
+  `user` (Firebase Auth), `profile` (the Firestore `users` doc), and
+  `emailVerified`. `AuthGate` in `app/_layout.tsx` sends any signed-in user
+  whose email isn't verified to `app/verify-email.tsx` and lets nothing past
+  it — see "Email verification" below.
 
 ### Shared pieces — use these, don't re-roll them
 
@@ -65,6 +68,32 @@ firebase deploy --only firestore:rules
 - Config comes from `frontend/.env` (gitignored) via `EXPO_PUBLIC_FIREBASE_*`
   vars. See `env_example.txt`. These keys aren't secrets — they ship in the
   client bundle by design.
+
+### Email verification
+
+Registration sends a Firebase verification link (`sendEmailVerification` in
+`AuthContext.register`) and drops the user on `app/verify-email.tsx`. That
+screen polls `currentUser.reload()` every few seconds and on app-foreground,
+has a rate-limited Resend, and a manual re-check; `AuthGate` routes to the
+app automatically once `emailVerified` flips. No backend — Firebase hosts the
+email and the confirmation page.
+
+- **`onAuthStateChanged` does not refire when the email becomes verified.**
+  That's why `AuthContext` tracks `emailVerified` as its own state and
+  `reloadUser()` updates it. `reload()` alone also doesn't refresh the ID
+  token, so `reloadUser()` calls `getIdToken(true)` after a successful
+  verify — otherwise the `email_verified` claim the rules read stays stale
+  for up to an hour.
+- **The rules enforce it too.** `isVerified()` in `firestore.rules` gates
+  `events` / `announcements` / `checkIns` / `rsvps` / `pushTokens` and is
+  folded into `isAdmin()` / `isExec()`. `users` *create* is exempt (the
+  profile doc is written at sign-up, before verification); `users` update is
+  not.
+- **This locked out every account that existed before the feature shipped**
+  until they verify — including organizers, since `isAdmin()`/`isExec()` now
+  require a verified token. One-time click per person.
+- Customize the sender name / reply-to in Firebase console → Authentication →
+  Templates. The default template works as-is.
 
 ## Firestore data model
 
@@ -222,10 +251,9 @@ Windows / PowerShell:
   level. Considered and explicitly deferred — it's an integrity nuisance,
   not a way to farm extra points (the amount awarded is fixed either way),
   and not worth the added complexity right now.
-- **No email verification**, so the domain check only validates the string, not
-  that the person owns the address. Until this exists, "Northwestern students
-  only" isn't actually true — anyone can type an address they don't own.
-  Confirmed worth building; not done yet.
+- ~~No email verification~~ — **done.** See "Email verification" under
+  Firebase. The domain check plus a verified Firebase link now means an
+  address has to be a real chapter mailbox the person can open.
 - `assets/images/UIC-SHPE-Webapp.png` is now fully unreferenced (real
   Northwestern branding replaced it everywhere — see `nu_shpe_logo.png` and
   the generated icon/splash files) and safe to delete whenever.
