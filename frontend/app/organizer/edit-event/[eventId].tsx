@@ -205,7 +205,7 @@ export default function EditEventScreen() {
       <View style={styles.container}>
         <PageHeader title="Edit Event" onBack={() => router.back()} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.red} />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       </View>
     );
@@ -375,7 +375,7 @@ export default function EditEventScreen() {
             style={styles.deleteButton}
             onPress={() => setDeleteModalVisible(true)}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.red} />
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
             <Text style={styles.deleteButtonText}>Delete Event</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   chipSelected: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navy,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   chipText: {
     color: colors.text,
@@ -509,10 +509,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextSelected: {
-    color: colors.onNavy,
+    color: colors.onPurple,
   },
   errorText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.label,
     marginTop: spacing.xs,
   },
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.purple,
     height: 52,
     borderRadius: radius.card,
     justifyContent: 'center',
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   deleteButtonText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.body,
     fontWeight: '600',
   },
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalDeleteButton: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.danger,
   },
   modalDeleteText: {
     color: colors.card,

@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   iconCircle: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.purple,
     width: 52,
     height: 52,
     borderRadius: 26,

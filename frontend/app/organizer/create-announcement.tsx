@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   errorText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.label,
     marginTop: spacing.xs,
   },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.purple,
     height: 52,
     borderRadius: radius.card,
     justifyContent: 'center',

@@ -14,6 +14,7 @@ import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
+import { colors } from '../../../components/theme';
 import { buildQRPayload } from '@/utils/qrPayload';
 
 export default function OrganizerQrScreen() {
@@ -67,7 +68,7 @@ export default function OrganizerQrScreen() {
 
       <View style={styles.content}>
         {loading ? (
-          <ActivityIndicator size="large" color="#D50032" />
+          <ActivityIndicator size="large" color={colors.purple} />
         ) : notFound || !event ? (
           <Text style={styles.errorText}>Event not found.</Text>
         ) : (
@@ -76,7 +77,7 @@ export default function OrganizerQrScreen() {
               <QRCode
                 value={buildQRPayload(String(eventId), qrMode)}
                 size={260}
-                color="#1B2A6B"
+                color={colors.purple}
                 backgroundColor="#fff"
               />
             </View>
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     textAlign: 'center',
   },
   eventMeta: {
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   codeValue: {
     fontSize: 14,
     fontFamily: 'Menlo',
-    color: '#1B2A6B',
+    color: colors.purple,
     fontWeight: '600',
   },
   instructions: {
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   doneButton: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     marginHorizontal: 20,
     marginBottom: 24,
     height: 50,

@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { isChapterEmail, CHAPTER_EMAIL_LABEL } from '../utils/validation';
+import { colors } from '../components/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginBottom: 40,
     textAlign: 'center',
   },
@@ -141,20 +142,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 13,
     marginTop: -10,
     marginBottom: 10,
     marginLeft: 4,
   },
   formErrorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 10,
   },
   button: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     height: 50,
     borderRadius: 16,
     justifyContent: 'center',
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   registerBold: {
-    color: '#D50032',
+    color: colors.purple,
     fontWeight: '700',
   },
 });

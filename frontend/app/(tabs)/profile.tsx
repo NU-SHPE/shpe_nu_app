@@ -27,8 +27,9 @@ import type { EventDoc } from '../../types/event';
 import { calculateAge, formatEventDate, toDate } from '../../utils/date';
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
+import { colors } from '../../components/theme';
 
-const RED = '#c0392b';
+const RED = colors.purple;
 
 type CheckInRow = CheckInDoc & { id: string };
 
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
   adminBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1B2A6B',
+    backgroundColor: colors.purple,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff0f0',
+    backgroundColor: colors.purpleTint,
     borderWidth: 2,
     borderColor: RED,
     alignItems: 'center',

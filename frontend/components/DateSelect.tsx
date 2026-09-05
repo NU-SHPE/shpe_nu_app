@@ -88,7 +88,7 @@ export function DateSelect({ visible, value, onSelect, onClose }: Props) {
           {mode === 'year' ? (
             <View style={styles.header}>
               <TouchableOpacity onPress={() => setMode('day')} hitSlop={12}>
-                <Ionicons name="chevron-back" size={22} color={colors.navy} />
+                <Ionicons name="chevron-back" size={22} color={colors.purple} />
               </TouchableOpacity>
               <Text style={styles.monthLabel}>Select year</Text>
               <View style={styles.headerSpacer} />
@@ -96,16 +96,16 @@ export function DateSelect({ visible, value, onSelect, onClose }: Props) {
           ) : (
             <View style={styles.header}>
               <TouchableOpacity onPress={() => step(-1)} hitSlop={12}>
-                <Ionicons name="chevron-back" size={22} color={colors.navy} />
+                <Ionicons name="chevron-back" size={22} color={colors.purple} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.monthLabelButton} onPress={openYearList} hitSlop={8}>
                 <Text style={styles.monthLabel}>
                   {MONTHS[month]} {year}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.navy} />
+                <Ionicons name="chevron-down" size={16} color={colors.purple} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => step(1)} hitSlop={12}>
-                <Ionicons name="chevron-forward" size={22} color={colors.navy} />
+                <Ionicons name="chevron-forward" size={22} color={colors.purple} />
               </TouchableOpacity>
             </View>
           )}
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   monthLabel: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.purple,
   },
   grid: {
     flexDirection: 'row',
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cellSelected: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.purple,
     borderRadius: 21,
   },
   dayText: {
@@ -250,11 +250,11 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   dayToday: {
-    color: colors.red,
+    color: colors.purple,
     fontWeight: '700',
   },
   dayTextSelected: {
-    color: colors.onNavy,
+    color: colors.onPurple,
     fontWeight: '700',
   },
   yearList: {
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   yearRowSelected: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.purple,
     borderRadius: radius.card,
   },
   yearText: {
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   yearTextSelected: {
-    color: colors.onNavy,
+    color: colors.onPurple,
     fontWeight: '700',
   },
   cancel: {

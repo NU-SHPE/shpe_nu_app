@@ -46,9 +46,9 @@ firebase deploy --only firestore:rules
 
 | File | What it owns |
 |---|---|
-| `components/theme.ts` | colors, spacing, radius, font sizes |
-| `components/PageHeader.tsx` | the navy banner on every screen |
-| `components/ActionButton.tsx` | icon-in-a-red-circle action cards |
+| `components/theme.ts` | colors, spacing, radius, font sizes — brand is Northwestern Purple (`#4E2A84`); see "Theming" below |
+| `components/PageHeader.tsx` | the purple banner on every screen |
+| `components/ActionButton.tsx` | icon-in-a-purple-circle action cards |
 | `components/DateSelect.tsx` | month-grid calendar picker, with a tap-to-jump year list |
 | `components/TimeSelect.tsx` | 15-minute time list |
 | `components/MajorSelect.tsx` | major picker (`types/user.ts`'s `MAJOR_OPTIONS`) with an "Other" free-text escape hatch |
@@ -197,6 +197,28 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   active long after it's ended, with nothing wrong in the data. Pass
   `useNow()`'s value in as the second argument anywhere this matters
   (`events.tsx`, `organizer.tsx`, `events-info/[id].tsx` all do).
+
+## Theming
+
+The brand is **Northwestern Purple `#4E2A84`** and its official tints. Every
+brand-colored pixel resolves from `components/theme.ts` — reskinning the app
+for another chapter is an edit to the `colors` block there, not a hunt
+through screens.
+
+- `colors.purple` / `purpleDeep` / `purpleTint` / `onPurple` — the brand.
+  Banners, primary buttons, selected states, accents, "today" markers.
+- `colors.danger` (`#C0392B`, red) — **deliberately not part of the brand
+  palette.** Validation-error text and destructive ("Delete") actions use
+  it so they stay red regardless of the brand color. Don't fold it into
+  `purple`.
+- `colors.navy` / `colors.red` still exist as **deprecated aliases** (both
+  point at the brand purple) so older code keeps working. Prefer the names
+  above in new code.
+- Neutral greys and the dark form-screen backgrounds (`surfaceDark`,
+  `inputDark`, `#25292e`, `#3a3f47`) are brand-neutral and were left alone.
+- History: the app was SHPE-red (`#D50032`) + navy (`#1B2A6B`). If you see a
+  raw `#D50032` / `#1B2A6B` / `#001E62` anywhere, it's a stray that missed
+  the purple migration — route it through `theme.ts`.
 
 ## Conventions
 

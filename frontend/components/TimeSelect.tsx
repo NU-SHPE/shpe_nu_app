@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.purple,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   rowSelected: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.purple,
   },
   rowText: {
     fontSize: fontSize.body,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rowTextSelected: {
-    color: colors.onNavy,
+    color: colors.onPurple,
     fontWeight: '700',
   },
   cancel: {

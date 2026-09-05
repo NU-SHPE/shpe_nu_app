@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.heading,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.purple,
   },
   badge: {
     backgroundColor: colors.border,

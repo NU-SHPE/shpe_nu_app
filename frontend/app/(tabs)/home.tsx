@@ -7,6 +7,7 @@ import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
 import { formatRelativeTime } from '../../utils/date';
+import { colors } from '../../components/theme';
 
 function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
   return (
@@ -61,7 +62,7 @@ export default function Index() {
         <Text style={styles.sectionTitle}>Announcements</Text>
         {loading ? (
           <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#1B2A6B" />
+            <ActivityIndicator size="large" color={colors.purple} />
           </View>
         ) : announcements.length === 0 ? (
           <Text style={[styles.cardBody, { textAlign: 'center', marginTop: 8 }]}>No announcements yet.</Text>
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionIconCircle: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     width: 52,
     height: 52,
     borderRadius: 26,
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginBottom: 4,
     marginTop: 8,
   },
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginBottom: 4,
   },
   cardBody: {

@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   chipSelected: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navy,
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   chipText: {
     color: colors.text,
@@ -355,10 +355,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextSelected: {
-    color: colors.onNavy,
+    color: colors.onPurple,
   },
   errorText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.label,
     marginTop: spacing.xs,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.purple,
     height: 52,
     borderRadius: radius.card,
     justifyContent: 'center',

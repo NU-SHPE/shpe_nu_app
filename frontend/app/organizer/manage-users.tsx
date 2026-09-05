@@ -186,7 +186,7 @@ export default function ManageUsersScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.red} />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       ) : filteredUsers.length === 0 ? (
         <Text style={styles.emptyText}>No members found.</Text>
@@ -202,7 +202,7 @@ export default function ManageUsersScreen() {
                 <Text style={styles.email}>{row.email}</Text>
                 <Text style={styles.major}>{row.majors?.length ? row.majors.join(', ') : '—'}</Text>
                 <View style={styles.pointsRow}>
-                  <Ionicons name="trophy" size={12} color={colors.red} />
+                  <Ionicons name="trophy" size={12} color={colors.purple} />
                   <Text style={styles.points}>{pointsByUser.get(row.id) ?? 0} pts</Text>
                 </View>
                 {row.isAdmin ? <Text style={styles.adminBadge}>Admin</Text> : null}
@@ -210,12 +210,12 @@ export default function ManageUsersScreen() {
               {row.isAdmin ? (
                 <Text style={styles.adminNote}>Console-only</Text>
               ) : savingId === row.id ? (
-                <ActivityIndicator color={colors.red} />
+                <ActivityIndicator color={colors.purple} />
               ) : (
                 <Switch
                   value={row.isExec === true}
                   onValueChange={(next) => toggleExec(row, next)}
-                  trackColor={{ false: '#ccc', true: colors.red }}
+                  trackColor={{ false: '#ccc', true: colors.purple }}
                   thumbColor="#fff"
                   ios_backgroundColor="#ccc"
                 />
@@ -247,7 +247,7 @@ export default function ManageUsersScreen() {
                 ListHeaderComponent={
                   <View style={styles.detailSection}>
                     <View style={styles.detailPointsRow}>
-                      <Ionicons name="trophy" size={18} color={colors.red} />
+                      <Ionicons name="trophy" size={18} color={colors.purple} />
                       <Text style={styles.detailPoints}>
                         {pointsByUser.get(selectedUser.id) ?? 0} total points
                       </Text>
@@ -272,7 +272,7 @@ export default function ManageUsersScreen() {
                     {sortedSelectedCheckIns.length === 0 ? (
                       <Text style={styles.historyEmpty}>No check-ins yet.</Text>
                     ) : eventsLoading ? (
-                      <ActivityIndicator style={{ marginBottom: 8 }} color={colors.red} />
+                      <ActivityIndicator style={{ marginBottom: 8 }} color={colors.purple} />
                     ) : null}
                   </View>
                 }
@@ -374,13 +374,13 @@ const styles = StyleSheet.create({
   points: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.red,
+    color: colors.purple,
   },
   adminBadge: {
     marginTop: spacing.xs,
     alignSelf: 'flex-start',
-    backgroundColor: colors.navy,
-    color: colors.onNavy,
+    backgroundColor: colors.purple,
+    color: colors.onPurple,
     fontSize: 11,
     fontWeight: '700',
     paddingHorizontal: spacing.sm,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.purple,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
@@ -492,6 +492,6 @@ const styles = StyleSheet.create({
   historyPoints: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.red,
+    color: colors.purple,
   },
 });

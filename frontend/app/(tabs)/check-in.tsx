@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
 import { db } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
+import { colors } from '../../components/theme';
 import { isCheckInOpen, isCheckOutOpen } from '@/utils/scanWindow';
 import { parseQRPayload } from '@/utils/qrPayload';
 
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   scanLine: {
     height: 2,
     width: '110%',
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     position: 'absolute',
     zIndex: 2,
   },
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderColor: '#1B2A6B',
+    borderColor: colors.purple,
     borderWidth: 6,
     borderRadius: 4,
   },
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     textAlign: 'center',
     marginBottom: 12,
   },

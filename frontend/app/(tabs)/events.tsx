@@ -9,6 +9,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { CollapsibleSection } from '../../components/CollapsibleSection';
 import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
 import { useNow } from '../../hooks/useNow';
+import { colors } from '../../components/theme';
 
 export default function EventPage() {
   const router = useRouter();
@@ -117,7 +118,7 @@ export default function EventPage() {
 
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#D40032" />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       ) : (
         <SectionList
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     top: 15,
     right: 15,
     fontSize: 24,
-    color: '#D40032',
+    color: colors.purple,
   },
 
   title: {
@@ -246,8 +247,8 @@ const styles = StyleSheet.create({
   },
 
   filterChipActive: {
-    backgroundColor: '#001E62',
-    borderColor: '#001E62',
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
 
   filterChipText: {

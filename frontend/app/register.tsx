@@ -18,6 +18,7 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { DateSelect } from '../components/DateSelect';
 import { MajorSelect, OTHER } from '../components/MajorSelect';
 import { calculateAge, formatDateInput } from '../utils/date';
+import { colors } from '../components/theme';
 import {
   MAJOR_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
@@ -308,7 +309,7 @@ export default function RegisterScreen() {
           );
         })}
         <TouchableOpacity style={styles.addRow} onPress={() => setShowMajorPicker(true)}>
-          <Ionicons name="add-circle-outline" size={20} color="#D50032" />
+          <Ionicons name="add-circle-outline" size={20} color={colors.purple} />
           <Text style={styles.addRowText}>Add major</Text>
         </TouchableOpacity>
         {errors.majors ? <Text style={styles.errorText}>{errors.majors}</Text> : null}
@@ -340,7 +341,7 @@ export default function RegisterScreen() {
           </View>
         ))}
         <TouchableOpacity style={styles.addRow} onPress={addMinor}>
-          <Ionicons name="add-circle-outline" size={20} color="#D50032" />
+          <Ionicons name="add-circle-outline" size={20} color={colors.purple} />
           <Text style={styles.addRowText}>Add minor</Text>
         </TouchableOpacity>
 
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionLabel: {
-    color: '#D50032',
+    color: colors.purple,
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 1,
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 13,
     marginTop: -10,
     marginBottom: 10,
@@ -443,7 +444,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   formErrorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 10,
@@ -477,12 +478,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   addRowText: {
-    color: '#D50032',
+    color: colors.purple,
     fontSize: 14,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   loginBold: {
-    color: '#D50032',
+    color: colors.purple,
     fontWeight: '700',
   },
 });

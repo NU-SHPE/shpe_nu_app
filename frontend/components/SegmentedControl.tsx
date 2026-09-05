@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors } from './theme';
 
 interface SegmentedControlProps<T extends string> {
   options: readonly T[];
@@ -48,8 +49,8 @@ const styles = StyleSheet.create({
     borderColor: '#3a3f47',
   },
   pillSelected: {
-    backgroundColor: '#D50032',
-    borderColor: '#D50032',
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
   },
   label: {
     color: '#ccc',

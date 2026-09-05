@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../contexts/AuthContext';
+import { colors } from '../../components/theme';
 
 export default function TabLayout() {
   const { profile } = useAuth();
@@ -10,7 +11,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#D50032',
+        tabBarActiveTintColor: colors.purple,
         tabBarInactiveTintColor: '#6b7280',
         headerStyle: {
           backgroundColor: '#25292e',

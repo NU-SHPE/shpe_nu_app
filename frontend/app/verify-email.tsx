@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../contexts/AuthContext';
+import { colors } from '../components/theme';
 
 // How often, while this screen sits open, we ask Firebase whether the link
 // has been clicked yet. Verification happens in the user's browser, not here,
@@ -106,7 +107,7 @@ export default function VerifyEmailScreen() {
       />
 
       <View style={styles.iconCircle}>
-        <Ionicons name="mail-unread-outline" size={34} color="#D50032" />
+        <Ionicons name="mail-unread-outline" size={34} color={colors.purple} />
       </View>
 
       <Text style={styles.title}>Verify your email</Text>
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff0f0',
+    backgroundColor: colors.purpleTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -199,19 +200,19 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   noticeText: {
-    color: '#1B2A6B',
+    color: colors.purple,
     fontSize: 13,
     textAlign: 'center',
     marginTop: 12,
   },
   errorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 13,
     textAlign: 'center',
     marginTop: 12,
   },
   button: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     height: 50,
     borderRadius: 16,
     justifyContent: 'center',
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   secondaryText: {
-    color: '#D50032',
+    color: colors.purple,
     fontSize: 15,
     fontWeight: '600',
   },

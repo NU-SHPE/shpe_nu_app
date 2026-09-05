@@ -18,6 +18,7 @@ import { CollapsibleSection } from '../../components/CollapsibleSection';
 import { categoryLabel } from '../../types/event';
 import { formatEventDate, formatTimeRange, isEventPast } from '../../utils/date';
 import { useNow } from '../../hooks/useNow';
+import { colors } from '../../components/theme';
 
 function PastEventCard({
   ev,
@@ -167,7 +168,7 @@ export default function OrganizerScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#D50032" />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       ) : (
         <SectionList
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginTop: 8,
   },
   scrollContent: {
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1B2A6B',
+    color: colors.purple,
     marginBottom: 4,
   },
   cardInfo: {
@@ -352,14 +353,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
   },
   // Only overrides the colour — size and shape come from qrButton underneath.
   qrButtonOut: {
-    backgroundColor: '#1B2A6B',
+    backgroundColor: colors.purple,
   },
   qrButtonEdit: {
     backgroundColor: '#6b7280',

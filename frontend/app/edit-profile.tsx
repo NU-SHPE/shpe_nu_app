@@ -20,6 +20,7 @@ import { PageHeader } from '../components/PageHeader';
 import { DateSelect } from '../components/DateSelect';
 import { MajorSelect, OTHER } from '../components/MajorSelect';
 import { calculateAge, formatDateInput } from '../utils/date';
+import { colors } from '../components/theme';
 import {
   MAJOR_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
@@ -258,7 +259,7 @@ export default function EditProfileScreen() {
             );
           })}
           <TouchableOpacity style={styles.addRow} onPress={() => setShowMajorPicker(true)}>
-            <Ionicons name="add-circle-outline" size={20} color="#D50032" />
+            <Ionicons name="add-circle-outline" size={20} color={colors.purple} />
             <Text style={styles.addRowText}>Add major</Text>
           </TouchableOpacity>
           {errors.majors ? <Text style={styles.errorText}>{errors.majors}</Text> : null}
@@ -290,7 +291,7 @@ export default function EditProfileScreen() {
             </View>
           ))}
           <TouchableOpacity style={styles.addRow} onPress={addMinor}>
-            <Ionicons name="add-circle-outline" size={20} color="#D50032" />
+            <Ionicons name="add-circle-outline" size={20} color={colors.purple} />
             <Text style={styles.addRowText}>Add minor</Text>
           </TouchableOpacity>
 
@@ -350,14 +351,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 13,
     marginTop: -6,
     marginBottom: 10,
     marginLeft: 4,
   },
   formErrorText: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 10,
@@ -391,12 +392,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   addRowText: {
-    color: '#D50032',
+    color: colors.purple,
     fontSize: 14,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',

@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.purple,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.md,
   },

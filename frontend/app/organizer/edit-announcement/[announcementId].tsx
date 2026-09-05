@@ -124,7 +124,7 @@ export default function EditAnnouncementScreen() {
       <View style={styles.container}>
         <PageHeader title="Edit Announcement" onBack={() => router.back()} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.red} />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       </View>
     );
@@ -188,7 +188,7 @@ export default function EditAnnouncementScreen() {
             style={styles.deleteButton}
             onPress={() => setDeleteModalVisible(true)}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.red} />
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
             <Text style={styles.deleteButtonText}>Delete Announcement</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -277,12 +277,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   errorText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.label,
     marginTop: spacing.xs,
   },
   button: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.purple,
     height: 52,
     borderRadius: radius.card,
     justifyContent: 'center',
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   deleteButtonText: {
-    color: colors.red,
+    color: colors.danger,
     fontSize: fontSize.body,
     fontWeight: '600',
   },
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalDeleteButton: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.danger,
   },
   modalDeleteText: {
     color: colors.card,

@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { colors } from '../components/theme';
 
 const AUTH_SEGMENTS = new Set(['', 'register']);
 const VERIFY_SEGMENT = 'verify-email';
@@ -32,7 +33,7 @@ function AuthGate() {
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#D50032" />
+        <ActivityIndicator size="large" color={colors.purple} />
       </View>
     );
   }

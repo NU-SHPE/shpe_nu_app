@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * The navy banner at the top of every screen.
+ * The purple banner at the top of every screen.
  *
  * Top padding comes from the device's safe-area inset rather than a fixed
  * number. A hardcoded paddingTop can't know where the notch or camera cutout
@@ -33,7 +33,7 @@ export function PageHeader({ title, subtitle, onBack }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={28} color={colors.onNavy} />
+            <Ionicons name="arrow-back" size={28} color={colors.onPurple} />
           </TouchableOpacity>
         ) : null}
         <Text style={styles.title} numberOfLines={1}>
@@ -48,7 +48,7 @@ export function PageHeader({ title, subtitle, onBack }: Props) {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.purple,
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
     borderBottomLeftRadius: radius.header,
@@ -63,12 +63,12 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    color: colors.red,
+    color: colors.onPurple,
     fontSize: fontSize.title,
     fontWeight: '700',
   },
   subtitle: {
-    color: colors.onNavy,
+    color: colors.onPurple,
     fontSize: fontSize.body,
     marginTop: spacing.sm,
   },

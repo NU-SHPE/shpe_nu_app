@@ -19,8 +19,9 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange, isEventPast, toDate } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
 import { useNow } from '../../../hooks/useNow';
+import { colors } from '../../../components/theme';
 
-const NAVY = '#001E62';
+const NAVY = colors.purple;
 
 /**
  * A plain link, not the real Google Calendar API — no OAuth, no API key, no
@@ -130,7 +131,7 @@ export default function EventInfo() {
 
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#D50032" />
+          <ActivityIndicator size="large" color={colors.purple} />
         </View>
       ) : !event ? (
         <View style={styles.loadingBox}>
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   blue: {
-    color: '#001E62',
+    color: colors.purple,
   },
   meta: {
     fontSize: 15,
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   idbutton: {
     padding: 15,
     borderRadius: 16,
-    backgroundColor: '#001E62',
+    backgroundColor: colors.purple,
     marginBottom: 10,
     alignItems: 'center',
   },
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   rsvpError: {
-    color: '#D50032',
+    color: colors.danger,
     fontSize: 13,
     textAlign: 'center',
     marginTop: -4,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   checkinbutton: {
     padding: 15,
     borderRadius: 16,
-    backgroundColor: '#D50032',
+    backgroundColor: colors.purple,
     marginBottom: 10,
     alignItems: 'center',
   },
