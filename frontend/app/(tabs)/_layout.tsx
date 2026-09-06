@@ -1,10 +1,12 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../components/theme';
 
 export default function TabLayout() {
   const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
   const canAccessOrganizer = profile?.isAdmin === true || profile?.isExec === true;
 
   return (
@@ -22,9 +24,13 @@ export default function TabLayout() {
           backgroundColor: '#ffffff',
           borderTopWidth: 0.5,
           borderTopColor: '#e5e7eb',
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          // Explicit height overrides the navigator's automatic safe-area
+          // handling, so add the bottom inset back — the iPhone home indicator
+          // on native, Safari's bottom chrome on mobile web. The base needs
+          // room for a 24px icon plus the label under it.
+          height: 80 + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
+          paddingTop: 10,
         },
         tabBarLabelStyle: {
           fontSize: 12,
