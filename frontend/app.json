@@ -29,7 +29,7 @@
     "web": {
       "name": "SHPE App",
       "shortName": "SHPE",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/nu-shpe-favicon.png"
     },
     "plugins": [

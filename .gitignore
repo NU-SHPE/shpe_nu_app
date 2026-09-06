@@ -57,3 +57,6 @@ desktop.ini
 *.ntvs*
 *.njsproj
 *.sln
+
+# Vercel
+.vercel
