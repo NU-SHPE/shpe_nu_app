@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   onSnapshot,
   query,
@@ -48,13 +49,19 @@ const buildGoogleCalendarUrl = (event: any): string | null => {
 export default function EventInfo() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rsvped, setRsvped] = useState(false);
   const [rsvpCount, setRsvpCount] = useState(0);
   const [rsvpSaving, setRsvpSaving] = useState(false);
   const [rsvpError, setRsvpError] = useState('');
+  const [attendance, setAttendance] = useState<number | null>(null);
+
+  const isOfficer = profile?.isAdmin === true || profile?.isExec === true;
+  // Admin manages any event; exec only ones they created — mirrors the
+  // events update/delete rule in firestore.rules.
+  const canManage = profile?.isAdmin === true || (!!event && event.createdBy === user?.uid);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -92,6 +99,16 @@ export default function EventInfo() {
       (error) => console.error('Error loading RSVP count:', error),
     );
   }, [id]);
+
+  // Attendance count for the officer manage card. Admin-only: firestore.rules
+  // grants checkIns read to isAdmin() only. One aggregation query, not a live
+  // listener — the number only needs to be right when the page is opened.
+  useEffect(() => {
+    if (!id || profile?.isAdmin !== true) return;
+    getCountFromServer(query(collection(db, 'checkIns'), where('eventId', '==', id)))
+      .then((snap) => setAttendance(snap.data().count))
+      .catch((error) => console.error('Error loading attendance count:', error));
+  }, [id, profile?.isAdmin]);
 
   const now = useNow();
   const eventPast = event ? isEventPast(event, now) : false;
@@ -212,6 +229,54 @@ export default function EventInfo() {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {isOfficer ? (
+            <Card>
+              <View style={styles.iconRow}>
+                <Ionicons name="shield-checkmark-outline" size={22} color={NAVY} />
+                <Text style={[styles.header2, styles.blue]}>Manage</Text>
+                {profile?.isAdmin === true ? (
+                  <Text style={styles.rsvpCountInline}>
+                    · {attendance == null ? '…' : attendance} checked in
+                  </Text>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={styles.manageButton}
+                onPress={() => router.push(`/organizer/qr/${event.id}`)}
+              >
+                <View style={styles.iconRow}>
+                  <Ionicons name="log-in-outline" size={20} color="#fff" />
+                  <Text style={styles.buttonTxt}>Show check-in QR</Text>
+                </View>
+              </TouchableOpacity>
+
+              {event.checkOutPoints > 0 ? (
+                <TouchableOpacity
+                  style={styles.manageButton}
+                  onPress={() => router.push(`/organizer/qr/${event.id}?mode=out`)}
+                >
+                  <View style={styles.iconRow}>
+                    <Ionicons name="log-out-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonTxt}>Show check-out QR</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
+
+              {canManage ? (
+                <TouchableOpacity
+                  style={styles.manageButtonOutline}
+                  onPress={() => router.push(`/organizer/edit-event/${event.id}`)}
+                >
+                  <View style={styles.iconRow}>
+                    <Ionicons name="pencil" size={18} color={NAVY} />
+                    <Text style={styles.calendarButtonTxt}>Edit event</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
+            </Card>
+          ) : null}
         </ScrollView>
       )}
     </>
@@ -304,5 +369,21 @@ const styles = StyleSheet.create({
   calendarButtonTxt: {
     color: NAVY,
     fontWeight: '600',
+  },
+  manageButton: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: colors.purple,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  manageButtonOutline: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: NAVY,
+    alignItems: 'center',
+    marginTop: 8,
   },
 });
