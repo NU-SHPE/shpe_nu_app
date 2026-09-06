@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
   User,
 } from 'firebase/auth';
@@ -81,6 +82,13 @@ interface AuthContextValue {
   ) => Promise<void>;
   /** Re-send the verification link to the current user's address. */
   resendVerification: () => Promise<void>;
+  /**
+   * Send a password-reset link. Resolves whether or not an account exists for
+   * the address -- Firebase's email-enumeration protection means it may not
+   * throw for an unknown email, so callers show the same "check your inbox"
+   * message either way rather than confirming which emails are registered.
+   */
+  resetPassword: (email: string) => Promise<void>;
   /**
    * Pull the latest user record from Firebase and, if the email just became
    * verified, force-refresh the ID token so the `email_verified` claim the
@@ -163,6 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (auth.currentUser) await sendEmailVerification(auth.currentUser);
   };
 
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email.trim());
+  };
+
   const reloadUser = async () => {
     const current = auth.currentUser;
     if (!current) return false;
@@ -193,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         resendVerification,
+        resetPassword,
         reloadUser,
         logout,
       }}

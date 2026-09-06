@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { colors } from '../components/theme';
 
-const AUTH_SEGMENTS = new Set(['', 'register']);
+const AUTH_SEGMENTS = new Set(['', 'register', 'forgot-password']);
 const VERIFY_SEGMENT = 'verify-email';
 
 function AuthGate() {
@@ -42,6 +42,7 @@ function AuthGate() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="forgot-password" />
       <Stack.Screen name="verify-email" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="organizer/qr/[eventId]" />

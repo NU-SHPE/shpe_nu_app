@@ -92,6 +92,15 @@ export default function LoginScreen() {
       />
       {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
+      <TouchableOpacity
+        style={styles.forgotLink}
+        onPress={() =>
+          router.push({ pathname: '/forgot-password', params: { email: email.trim() } })
+        }
+      >
+        <Text style={styles.forgotText}>Forgot password?</Text>
+      </TouchableOpacity>
+
       {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
 
       <TouchableOpacity
@@ -173,6 +182,17 @@ const styles = StyleSheet.create({
     height: 150,
     marginBottom: 20,
     alignSelf: 'center',
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+    marginBottom: 6,
+    padding: 4,
+  },
+  forgotText: {
+    color: colors.purple,
+    fontSize: 14,
+    fontWeight: '600',
   },
   registerLink: {
     marginTop: 24,
