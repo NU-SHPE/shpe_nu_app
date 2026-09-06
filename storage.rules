@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Cloud Storage holds exactly one thing: member resumes for the resume book.
+// Path is `resumes/{uid}/resume.pdf` — one file per member, replaced in place.
+//
+// Read access mirrors the `users` doc rule in firestore.rules: you can read
+// your own resume, and isAdmin can read anyone's (the resume book is an
+// admin-only screen, same as Manage Users). isExec deliberately cannot —
+// exec can run events and QR but has never been able to read member PII.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isVerified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    match /resumes/{uid}/{fileName} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isAdmin());
+
+      // Members upload their own, and only a PDF up to 5 MB. contentType and
+      // size are checked on the incoming object so a console upload can't
+      // sneak past the app's picker.
+      allow write: if isVerified()
+        && request.auth.uid == uid
+        && fileName == 'resume.pdf'
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+
+      allow delete: if request.auth != null
+        && (request.auth.uid == uid || isAdmin());
+    }
+
+    // Nothing else is stored here.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

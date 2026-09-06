@@ -163,6 +163,22 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Resume book: one doc per member, id = uid, holding metadata for the
+    // file that lives at `resumes/{uid}/resume.pdf` in Cloud Storage (the
+    // Storage list API is too clunky to build the admin list from, so the
+    // list is driven off these docs). Read access matches the `users` rule
+    // exactly — self, or isAdmin for the admin-only resume book screen.
+    // isExec cannot read member PII and that doesn't change here.
+    match /resumes/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+
+      allow write: if isVerified()
+        && request.auth.uid == uid
+        && request.resource.data.userId == uid;
+
+      allow delete: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
     function eventOf(data) {
       return get(/databases/$(database)/documents/events/$(data.eventId)).data;
     }

@@ -250,6 +250,22 @@ const ProfileScreen = () => {
 
           <View style={styles.divider} />
 
+          {/* Careers */}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => router.push('/careers')}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconWrap}>
+                <Ionicons name="briefcase-outline" size={22} color="#555" />
+              </View>
+              <Text style={styles.settingLabel}>Careers</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
           {/* Notifications */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>

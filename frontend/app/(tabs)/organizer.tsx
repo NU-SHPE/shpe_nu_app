@@ -58,6 +58,11 @@ export default function OrganizerScreen() {
               label="Manage Users"
               onPress={() => router.push('/organizer/manage-users')}
             />
+            <ActionButton
+              icon="document-text"
+              label="Resume Book"
+              onPress={() => router.push('/organizer/resume-book')}
+            />
           </View>
         ) : null}
       </ScrollView>

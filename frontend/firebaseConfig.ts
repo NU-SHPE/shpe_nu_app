@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -34,3 +35,8 @@ export const auth: Auth =
     : initializeAuth(app, { persistence: nativePersistence() });
 
 export const db = getFirestore(app);
+
+// Cloud Storage — only the resume book uses it. Requires the Blaze plan
+// (this project's bucket is the newer `.firebasestorage.app` kind, which has
+// no Spark free tier); usage stays inside the free allowance at chapter scale.
+export const storage = getStorage(app);

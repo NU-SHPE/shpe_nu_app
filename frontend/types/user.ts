@@ -12,6 +12,44 @@ export const SCHOOL_LEVEL_OPTIONS = [
 ] as const;
 export type SchoolLevel = (typeof SCHOOL_LEVEL_OPTIONS)[number];
 
+// --- Career fields (optional, edited from the Careers screen). Used by
+// the resume book and its CSV export. ---
+
+export const SEEKING_OPTIONS = ['Internship', 'Co-op', 'Full-time', 'Research'] as const;
+export type Seeking = (typeof SEEKING_OPTIONS)[number];
+
+// The two questions every job application asks, kept separate here for the
+// same reason they're separate there — they're independent facts.
+export const YES_NO_OPTIONS = ['Yes', 'No', 'Prefer not to say'] as const;
+export type YesNo = (typeof YES_NO_OPTIONS)[number];
+
+export const WORK_AUTH_QUESTION =
+  'Are you legally authorized to work in the United States?';
+export const SPONSORSHIP_QUESTION =
+  'Will you now or in the future need visa sponsorship for employment?';
+
+// Expected graduation is stored as `gradTerm` = "YYYY-MM" (e.g. "2027-06").
+// Month matters for recruiting — a spring vs. fall grad is a different hiring
+// timeline — so it's month + year, not just a year.
+export const GRAD_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const;
+
+/** Current year through +6 — covers undergrad and grad students. */
+export const gradYearOptions = (now: Date = new Date()): number[] => {
+  const y = now.getFullYear();
+  return Array.from({ length: 7 }, (_, i) => y + i);
+};
+
+/** "2027-06" → "June 2027"; '' / bad input → ''. */
+export const formatGradTerm = (term: string | undefined): string => {
+  const m = /^(\d{4})-(\d{2})$/.exec(term ?? '');
+  if (!m) return '';
+  const month = GRAD_MONTHS[Number(m[2]) - 1];
+  return month ? `${month} ${m[1]}` : '';
+};
+
 /**
  * Starter list, not an official catalog — picked from `MajorSelect`, with
  * "Other" as a free-text escape hatch for anything missing. Editing this list
@@ -51,6 +89,11 @@ export interface UserProfileInput {
   minors: string[];
   /** National Member ID, recommended — stored as '' when not provided. */
   memberId: string;
+  /** Career fields — all optional, filled from the Careers screen. */
+  gradTerm?: string; // "YYYY-MM", see formatGradTerm
+  seeking?: Seeking[];
+  workAuthorized?: YesNo; // WORK_AUTH_QUESTION
+  needsSponsorship?: YesNo; // SPONSORSHIP_QUESTION
 }
 
 export interface UserProfile extends UserProfileInput {
