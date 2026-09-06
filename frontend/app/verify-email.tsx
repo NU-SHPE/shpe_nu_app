@@ -131,7 +131,7 @@ export default function VerifyEmailScreen() {
         {checking ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>I've verified my email</Text>
+          <Text style={styles.buttonText}>I’ve verified my email</Text>
         )}
       </TouchableOpacity>
 

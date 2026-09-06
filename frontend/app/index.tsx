@@ -95,6 +95,7 @@ export default function LoginScreen() {
       {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
 
       <TouchableOpacity
+        testID="login-submit"
         style={styles.button}
         onPress={handleLogin}
         disabled={isLoading}
@@ -111,7 +112,7 @@ export default function LoginScreen() {
         onPress={() => router.push('/register')}
       >
         <Text style={styles.registerText}>
-          Don't have an account? <Text style={styles.registerBold}>Sign Up</Text>
+          Don’t have an account? <Text style={styles.registerBold}>Sign Up</Text>
         </Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
