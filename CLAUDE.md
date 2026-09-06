@@ -6,9 +6,13 @@ officers. Runs on iOS, Android, and web from one codebase.
 
 ## Repo state — read this first
 
-- **`develop` is the real app.** Work here.
-- **`main` is stale** — it still holds the pre-Firebase stub, including a fake
-  login that accepts `test` / `password`. Don't branch from it or trust it.
+- **`main` is the source of truth.** It must always be fully working — no
+  errors, no broken features. Vercel deploys it to production on every push.
+- **`develop` is the active working branch** — new features, experiments,
+  testing happen here. Vercel gives it preview deploys. Merge to `main` only
+  once it's verified solid.
+- The two were briefly out of sync (an old stale `main`); resolved by
+  fast-forwarding `main` to `develop` when the app went live.
 - History note: originally built with UIC's SHPE chapter at
   `communicationsshpeuic/shpe-web-app`. This repo is a full mirror of that work,
   now maintained for Northwestern. Most commits are from UIC contributors.
@@ -21,21 +25,68 @@ All app commands run from `frontend/`, not the repo root.
 cd frontend
 npx expo start        # then press w for web, or scan the QR with Expo Go
 npx expo start --clear  # after adding a native dependency
-npx tsc --noEmit      # typecheck — the real gate, use this before committing
+npm run typecheck     # tsc --noEmit — the real gate, use this before committing
+npm run lint          # expo lint — must be error-clean (warnings are tolerated)
+npm test              # build web + Playwright smoke tests (see Testing below)
 ```
 
-Firestore rules deploy from the **repo root** (where `firebase.json` lives):
+Rules deploy from the **repo root** (where `firebase.json` lives). Deploy the
+one you changed — never a bare `firebase deploy` (the `hosting` block there is
+a stale leftover, the app is on Vercel):
 
 ```bash
 firebase deploy --only firestore:rules
+firebase deploy --only storage        # storage.rules — the resume book
 ```
+
+## Testing
+
+There is no unit-test layer. What exists:
+
+- **`npm test`** (`frontend/`) — `expo export -p web` then Playwright against
+  the static build served as an SPA (`frontend/playwright.config.ts` spins up
+  `serve -s dist`). Specs in `frontend/e2e/`.
+- Coverage is **unauthenticated only**: login/register render, client-side
+  validation, the chapter-email check, SPA deep-link resolution, AuthGate
+  redirects, the not-found screen. **No Firebase calls** — CI feeds placeholder
+  `EXPO_PUBLIC_FIREBASE_*` vars just so `initializeApp` doesn't throw.
+- **Not covered, still a manual pass on a preview deploy:** real login, the
+  email-verification round trip, Firestore reads under `isVerified()`, QR
+  check-in, organizer screens.
+- **`.github/workflows/ci.yml`** runs typecheck + lint + `npm test` on every
+  push to `main`/`develop` and every PR.
+- React Navigation keeps prior screens mounted under the active one, so a bare
+  `getByText` can hit a hidden element from the previous screen. Target buttons
+  by `testID` (`login-submit`, `register-submit`; add more as needed) and
+  assert on text unique to the screen under test.
+
+## Hosting
+
+The web app is served from **Vercel** (same account as the chapter website,
+`nushpe.org`), at `app.nushpe.org`. Vercel auto-deploys on every push to
+`main`; PRs get preview URLs. Config is `frontend/vercel.json` (Vercel project
+Root Directory is `frontend`): builds with `npx expo export -p web`, serves
+`dist/`, rewrites all paths to `/index.html` (the app is `output: "single"`,
+a client-rendered SPA — see `app.json`). `frontend/public/privacy-policy.html`
+ships as a real file at `/privacy-policy.html`.
+
+- The `EXPO_PUBLIC_FIREBASE_*` vars live in Vercel's env settings, mirrored
+  from `frontend/.env`. Not secret (they ship in the bundle), but the build
+  has no `.env`, so a missing var there = broken Firebase in prod.
+- **Any hosting domain must be in Firebase Auth → Authorized domains** or
+  login is rejected there: `app.nushpe.org` and the `*.vercel.app` preview
+  domain both need adding (unlike Firebase Hosting's `*.web.app`, which was
+  automatic).
+- `firebase.json` still has a `hosting` block from an earlier Firebase
+  Hosting deploy at `shpe-member-app.web.app`. Harmless, unused; `firebase
+  deploy` in this repo should be `--only firestore:rules`, never `hosting`.
 
 ## Architecture
 
 - **Expo Router** — file-based routing under `frontend/app/`. Any file there
   becomes a route, so shared components belong in `frontend/components/`.
-- **Firebase** is the entire backend: Auth for credentials, Firestore for data.
-  There is no server to run.
+- **Firebase** is the entire backend: Auth for credentials, Firestore for data,
+  Cloud Storage for resume PDFs. There is no server to run.
 - Auth state flows through `frontend/contexts/AuthContext.tsx`, which exposes
   `user` (Firebase Auth), `profile` (the Firestore `users` doc), and
   `emailVerified`. `AuthGate` in `app/_layout.tsx` sends any signed-in user
@@ -54,6 +105,8 @@ firebase deploy --only firestore:rules
 | `components/MajorSelect.tsx` | major picker (`types/user.ts`'s `MAJOR_OPTIONS`) with an "Other" free-text escape hatch |
 | `components/CollapsibleSection.tsx` | header-only collapsible toggle (title, count badge, chevron) for a `SectionList`'s `renderSectionHeader` — always controlled, doesn't wrap children |
 | `hooks/useNow.ts` | a `Date` that refreshes every 60s — use with `isEventPast` anywhere "has this event ended" needs to stay correct while a screen just sits open, not only when the underlying data changes |
+| `hooks/useMyResume.ts` | the current member's own resume PDF — live metadata + pick/upload/replace/open/remove (Cloud Storage + the `resumes` doc) |
+| `components/ResumeCard.tsx` | the resume upload/manage card on the Careers tab, built on `useMyResume` |
 | `types/event.ts` | event categories and their point values |
 | `utils/date.ts` | timestamp formatting and form parsing |
 | `utils/qrPayload.ts` | check-in vs check-out QR payloads |
@@ -68,6 +121,57 @@ firebase deploy --only firestore:rules
 - Config comes from `frontend/.env` (gitignored) via `EXPO_PUBLIC_FIREBASE_*`
   vars. See `env_example.txt`. These keys aren't secrets — they ship in the
   client bundle by design.
+- **Auth + Firestore + Cloud Storage.** Storage is used by exactly one feature
+  (the resume book) and needs the **Blaze plan** — this project's bucket is the
+  newer `.firebasestorage.app` kind with no Spark free tier. Usage stays well
+  inside Blaze's free allowance at chapter scale (~$0/mo); a Cloud Billing
+  budget alert is the safety net. Still no server — Storage is client-SDK only.
+
+### Password reset from Profile
+
+Profile → "Change password" sends a reset link to the signed-in member's own
+address (`AuthContext.resetPassword`, same as `app/forgot-password.tsx`) via a
+confirm/sent `Modal` — not `updatePassword`, which would need a reauth flow.
+The old dead "Privacy" row was split into this plus a "Privacy Policy" row that
+opens `PRIVACY_POLICY_URL` (`app.nushpe.org/privacy-policy.html`) in a browser.
+
+### Careers screen + resume book
+
+`app/careers.tsx` — reached from a **"Careers" row on the Profile tab**
+(same pattern as "Edit Profile", not a tab of its own). A member's whole
+career profile in one place: the `ResumeCard` (upload/replace/view/remove
+one PDF ≤5 MB) plus the career fields, edited inline with a Save button.
+
+- Resume PDF → `resumes/{uid}/resume.pdf` in Storage + a `resumes/{uid}`
+  metadata doc in Firestore (the Storage list API is too weak to build the
+  admin list from).
+- **Career fields** (`gradTerm`, `seeking[]`, `workAuthorized`, `needsSponsorship`) live on the **`users`
+  profile** (options / helpers in `types/user.ts`), saved straight to the user
+  doc from the Careers screen. `gradTerm` is `"YYYY-MM"` (month matters for
+  recruiting — spring vs. fall grad); `formatGradTerm` renders "June 2027".
+  The resume book joins these off the member's profile (it already loads the
+  whole `users` collection).
+- `app/organizer/resume-book.tsx` (admin-only, linked from the Organizer hub)
+  is the browse/download/export screen.
+- **Staleness** — `isResumeStale` (`types/resume.ts`, >6 months on the resume's
+  `updatedAt`, i.e. the file-upload time). Shown on the member's card and as a
+  badge in the admin list.
+- **CSV export** on the resume-book screen: `buildCsv` → `exportCsv`, which
+  downloads a file on web and falls back to `Share.share` on native (no extra
+  deps). Member metadata (name, email, major, graduation, seeking, work-auth,
+  resume-updated date) — **not** resume download links; bulk-handing PDFs to an
+  outside recruiter is the deferred recruiter-access feature.
+
+- **Read access = self or `isAdmin`**, in both `firestore.rules` and
+  `storage.rules` — deliberately identical to the `users` doc rule. `isExec`
+  can run events/QR/announcements but has never been able to read member PII,
+  and a resume is PII. Don't widen this without a real decision (same category
+  as the parked member-visibility feature).
+- `storage.rules` also enforces PDF-only + 5 MB on the incoming object, so a
+  console upload can't bypass the app's picker. Storage rules read Firestore
+  for the admin check via `firestore.get(...users/$(uid)).data.isAdmin`.
+- The resume-book screen loads the whole `users` collection to join names onto
+  resumes — same accepted pattern as `manage-users.tsx`, admin-only, one screen.
 
 ### Email verification
 
@@ -92,8 +196,24 @@ email and the confirmation page.
 - **This locked out every account that existed before the feature shipped**
   until they verify — including organizers, since `isAdmin()`/`isExec()` now
   require a verified token. One-time click per person.
-- Customize the sender name / reply-to in Firebase console → Authentication →
-  Templates. The default template works as-is.
+- The email templates (verification *and* password reset) are **locked** for
+  this project — Firebase console shows "mail template updates are currently
+  unavailable." Google restricts this on many free-tier Auth projects for
+  anti-phishing. The defaults ("… for shpe-member-app", from
+  `noreply@shpe-member-app.firebaseapp.com`) go out as-is. Only fixes are
+  custom SMTP or sending the mail yourself from a Cloud Function — neither
+  done, neither blocking.
+
+### Password reset
+
+`app/forgot-password.tsx`, reached from a "Forgot password?" link on the
+login screen (which passes the typed email through as a route param).
+`AuthContext.resetPassword` → `sendPasswordResetEmail`; Firebase hosts the
+"set a new password" page, same as verification. The screen shows the same
+"if an account exists…" confirmation whether or not the address is
+registered, and treats `auth/user-not-found` as success — Firebase's
+email-enumeration protection may not throw for unknown emails, and we don't
+confirm which addresses have accounts either way.
 
 ## Firestore data model
 
@@ -107,18 +227,21 @@ Collections are created implicitly on first write. No schema, no SQL.
 | `announcements` | the Post Announcement form (organizer tab) |
 | `rsvps` | tapping RSVP on the event detail page, id `{uid}_{eventId}` |
 | `pushTokens` | registered automatically on sign-in, id = uid — see `AuthContext.tsx` |
+| `resumes` | uploading a resume from Careers, id = uid — metadata only, PDF is in Storage |
 
 ```
 events         title, description, location, category, checkInPoints,
                checkOutPoints, startsAt, endsAt, createdAt, createdBy
 users          firstName, lastName, birthday, sexAtBirth, gender, pronouns,
                schoolLevel, majors[], minors[], memberId, email, isAdmin,
-               isExec, createdAt
+               isExec, createdAt, gradTerm?, seeking[]?, workAuthorized?, needsSponsorship?
 checkIns       userId, eventId, checkedInAt, pointsAwarded,
                checkedOutAt?, checkOutPointsAwarded?
 announcements  title, body, createdAt, createdBy, createdByName
 rsvps          userId, eventId, rsvpedAt
 pushTokens     token, updatedAt
+resumes        userId, fileName, size, updatedAt
+               (PDF: Storage resumes/{uid}/resume.pdf)
 ```
 
 ### Check-in / check-out
@@ -182,21 +305,24 @@ the whole award lands on check-in. `checkOutPoints: 0` is what signals that.
   works even when the doc doesn't exist yet. If anything ever writes a check-in
   under a different ID scheme, reads break for that member — silently, since
   writes still succeed.
-- **Past-event lists (`events.tsx`, `organizer.tsx`) use `SectionList`, not
-  `ScrollView` + `.map()`.** Both used to mount every past card at once on
-  expand; at real chapter history (~100+ events) that's real lag.
-  `organizer.tsx`'s per-event attendance count is fetched inside each card's
-  own mount effect, not by the parent looping over the whole list — that's
-  what keeps the Firestore read count tied to what's actually scrolled into
-  view instead of the total event count ever created. Don't move that fetch
-  back up to an expand-time loop without re-reading why it moved.
+- **The past-event list in `events.tsx` uses `SectionList`, not `ScrollView` +
+  `.map()`.** It used to mount every past card at once on expand; at real
+  chapter history (~100+ events) that's real lag. (`organizer.tsx` used to
+  carry a copy of this list too — that's gone; see below.)
 - **`isEventPast` needs a live clock, not `new Date()` inline.** Calling it
   bare re-evaluates only when the component re-renders for some other
   reason (a Firestore update), not when the real-world clock actually
   passes the event's end time — a screen left open can show an event as
   active long after it's ended, with nothing wrong in the data. Pass
   `useNow()`'s value in as the second argument anywhere this matters
-  (`events.tsx`, `organizer.tsx`, `events-info/[id].tsx` all do).
+  (`events.tsx`, `events-info/[id].tsx`).
+- **There is one events list.** `organizer.tsx` is now just a tools hub (Create
+  Event, Post Announcement, Manage Users, Resume Book). Event management — the
+  check-in/check-out QR buttons, Edit, and the admin-only attendance count —
+  lives in a "Manage" card on `events-info/[id].tsx`, shown when
+  `isAdmin || isExec`, with `canManage` (admin, or exec who created it)
+  gating Edit. The attendance count there is a single `getCountFromServer`
+  on open, admin-only (checkIns read is `isAdmin()`-only in the rules).
 
 ## Theming
 
@@ -232,11 +358,20 @@ through screens.
   banner for anything not tied to one field). Screens that still call
   `Alert.alert` for anything user-facing (`create-event.tsx`'s save-failure
   path, `manage-users.tsx`, `profile.tsx`'s sign-out failure) haven't been
-  converted yet.
+  converted yet. `check-in.tsx` routes results through a `showResult()` helper
+  — inline banner on web, `Alert.alert` unchanged on native.
 - **The QR scanner guard is a ref, not state.** The camera fires many times per
   second; async state updates can't keep up. It's a time-based cooldown so it
   expires on its own — an earlier boolean lock could wedge shut when an Android
   alert was dismissed without firing its callback.
+- **QR scanning on web is our own decoder, not the browser's.** iOS Safari
+  (and every iOS browser — all WebKit) has no `BarcodeDetector`, which
+  `expo-camera`'s web path needs, so `CameraView.onBarcodeScanned` never fires
+  there. `components/WebQRScanner.web.tsx` grabs the camera with `getUserMedia`
+  and decodes frames with `jsQR` in JS; `check-in.tsx` renders it on
+  `Platform.OS === 'web'` and `CameraView` on native. The native stub
+  `WebQRScanner.tsx` just returns null. Camera *access* works on iOS Safari
+  over https; only the decoding was missing.
 - Chapter email domains live in `utils/validation.ts` as a list. Adding one is a
   one-line change — don't hardcode domains in screens.
 - Names are `firstName` + `lastName`. **Last name is free text and may hold
@@ -279,7 +414,7 @@ Windows / PowerShell:
 - `assets/images/UIC-SHPE-Webapp.png` is now fully unreferenced (real
   Northwestern branding replaced it everywhere — see `nu_shpe_logo.png` and
   the generated icon/splash files) and safe to delete whenever.
-- Past events on `events.tsx`/`organizer.tsx` still show as one flat list —
+- Past events on `events.tsx` still show as one flat list —
   grouping by month would help browsing once there's real history, but isn't
   needed for performance (see below, that part's fixed).
 - **`manage-users.tsx` loads the entire `checkIns` collection into memory
