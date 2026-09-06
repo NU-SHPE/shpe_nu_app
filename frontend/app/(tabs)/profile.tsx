@@ -20,6 +20,7 @@ import {
   where,
 } from 'firebase/firestore';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { displayName } from '../../types/user';
 import type { CheckInDoc } from '../../types/checkIn';
@@ -31,12 +32,17 @@ import { colors } from '../../components/theme';
 
 const RED = colors.purple;
 
+// The privacy policy is only hosted on the web deploy; native needs the
+// absolute production URL.
+const PRIVACY_POLICY_URL = 'https://app.nushpe.org/privacy-policy.html';
+
 type CheckInRow = CheckInDoc & { id: string };
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { user, profile, profileLoading, logout } = useAuth();
+  const { user, profile, profileLoading, logout, resetPassword } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [pwModal, setPwModal] = useState<'hidden' | 'confirm' | 'sending' | 'sent'>('hidden');
   const [eventsAttended, setEventsAttended] = useState(0);
   const [points, setPoints] = useState(0);
   const [checkIns, setCheckIns] = useState<CheckInRow[]>([]);
@@ -117,6 +123,19 @@ const ProfileScreen = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const handleSendPasswordReset = async () => {
+    if (!user?.email) return;
+    setPwModal('sending');
+    try {
+      await resetPassword(user.email);
+    } catch (error) {
+      // Even on failure we show "sent" — the reset endpoint doesn't reveal
+      // account state, and a retry is one tap away.
+      console.error('Error sending password reset:', error);
+    }
+    setPwModal('sent');
   };
 
   const roleLine =
@@ -250,15 +269,34 @@ const ProfileScreen = () => {
 
           <View style={styles.divider} />
 
-          {/* Privacy */}
-          <TouchableOpacity style={styles.settingRow}>
+          {/* Change password */}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => setPwModal('confirm')}
+          >
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconWrap}>
+                <Ionicons name="key-outline" size={22} color="#555" />
+              </View>
+              <Text style={styles.settingLabel}>Change password</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Privacy Policy */}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}
+          >
             <View style={styles.settingLeft}>
               <View style={styles.settingIconWrap}>
                 <Ionicons name="lock-closed-outline" size={22} color="#555" />
               </View>
-              <Text style={styles.settingLabel}>Privacy</Text>
+              <Text style={styles.settingLabel}>Privacy Policy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#bbb" />
+            <Ionicons name="open-outline" size={20} color="#bbb" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -327,6 +365,60 @@ const ProfileScreen = () => {
                   );
                 })}
               </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={pwModal !== 'hidden'}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPwModal('hidden')}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.pwSheet}>
+            {pwModal === 'sent' ? (
+              <>
+                <Text style={styles.pwTitle}>Check your inbox</Text>
+                <Text style={styles.pwBody}>
+                  We sent a password reset link to{'\n'}
+                  <Text style={styles.pwEmail}>{user?.email}</Text>. Open it to set
+                  a new password, then log in again.
+                </Text>
+                <TouchableOpacity
+                  style={styles.pwPrimary}
+                  onPress={() => setPwModal('hidden')}
+                >
+                  <Text style={styles.pwPrimaryText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.pwTitle}>Change password</Text>
+                <Text style={styles.pwBody}>
+                  We&rsquo;ll email a reset link to{'\n'}
+                  <Text style={styles.pwEmail}>{user?.email}</Text>.
+                </Text>
+                <TouchableOpacity
+                  style={styles.pwPrimary}
+                  onPress={handleSendPasswordReset}
+                  disabled={pwModal === 'sending'}
+                >
+                  {pwModal === 'sending' ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.pwPrimaryText}>Send reset link</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.pwCancel}
+                  onPress={() => setPwModal('hidden')}
+                  disabled={pwModal === 'sending'}
+                >
+                  <Text style={styles.pwCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -564,6 +656,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+
+  // Change-password modal
+  pwSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+  },
+  pwTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 8,
+  },
+  pwBody: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  pwEmail: {
+    fontWeight: '700',
+    color: '#111',
+  },
+  pwPrimary: {
+    backgroundColor: RED,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pwPrimaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  pwCancel: {
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  pwCancelText: {
+    color: '#888',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 
