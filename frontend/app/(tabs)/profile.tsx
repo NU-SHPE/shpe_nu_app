@@ -147,7 +147,6 @@ const ProfileScreen = () => {
 
   const detailRows: { icon: any; label: string; value: string }[] = [
     { icon: 'calendar-outline', label: 'Age', value: age != null ? String(age) : '—' },
-    { icon: 'male-female-outline', label: 'Sex assigned at birth', value: profile?.sexAtBirth ?? '—' },
     { icon: 'person-outline', label: 'Gender', value: profile?.gender || '—' },
     { icon: 'chatbubble-ellipses-outline', label: 'Pronouns', value: profile?.pronouns || '—' },
     { icon: 'school-outline', label: 'School level', value: profile?.schoolLevel ?? '—' },

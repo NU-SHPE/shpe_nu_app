@@ -22,11 +22,11 @@ import { MajorSelect, OTHER } from '../components/MajorSelect';
 import { calculateAge, formatDateInput } from '../utils/date';
 import { colors } from '../components/theme';
 import {
+  GENDER_OPTIONS,
   MAJOR_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
-  SEX_AT_BIRTH_OPTIONS,
+  type GenderOption,
   type SchoolLevel,
-  type SexAtBirth,
 } from '../types/user';
 
 type FieldErrors = Partial<
@@ -34,13 +34,21 @@ type FieldErrors = Partial<
     | 'firstName'
     | 'lastName'
     | 'birthday'
-    | 'sexAtBirth'
     | 'gender'
     | 'schoolLevel'
     | 'majors',
     string
   >
 >;
+
+/** Reverses gender-into-a-string storage back into the picker + free-text pair. */
+const parseGender = (value: string | undefined): [GenderOption | undefined, string] => {
+  if (!value) return [undefined, ''];
+  if ((GENDER_OPTIONS as readonly string[]).includes(value) && value !== 'Self-describe') {
+    return [value as GenderOption, ''];
+  }
+  return ['Self-describe', value];
+};
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -50,8 +58,8 @@ export default function EditProfileScreen() {
   const [lastName, setLastName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
-  const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
-  const [gender, setGender] = useState('');
+  const [genderOption, setGenderOption] = useState<GenderOption | undefined>();
+  const [genderSelfDescribe, setGenderSelfDescribe] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [majors, setMajors] = useState<string[]>([]);
@@ -67,8 +75,9 @@ export default function EditProfileScreen() {
     setFirstName(profile.firstName ?? '');
     setLastName(profile.lastName ?? '');
     setBirthday(profile.birthday ?? '');
-    setSexAtBirth(profile.sexAtBirth);
-    setGender(profile.gender ?? '');
+    const [option, selfDescribe] = parseGender(profile.gender);
+    setGenderOption(option);
+    setGenderSelfDescribe(selfDescribe);
     setPronouns(profile.pronouns ?? '');
     setSchoolLevel(profile.schoolLevel);
     setMajors(profile.majors ?? []);
@@ -102,8 +111,10 @@ export default function EditProfileScreen() {
       if (age == null || age < 13 || age > 120) next.birthday = 'That birthday looks wrong.';
     }
 
-    if (!sexAtBirth) next.sexAtBirth = 'Select one.';
-    if (!gender.trim()) next.gender = 'Enter your gender.';
+    if (!genderOption) next.gender = 'Select one.';
+    else if (genderOption === 'Self-describe' && !genderSelfDescribe.trim()) {
+      next.gender = 'Tell us how you identify, or choose another option.';
+    }
     if (!schoolLevel) next.schoolLevel = 'Select one.';
 
     if (majors.length === 0) next.majors = 'Add at least one major.';
@@ -122,12 +133,13 @@ export default function EditProfileScreen() {
 
     setSaving(true);
     try {
+      const gender =
+        genderOption === 'Self-describe' ? genderSelfDescribe.trim() : genderOption!;
       await updateDoc(doc(db, 'users', user.uid), {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         birthday,
-        sexAtBirth,
-        gender: gender.trim(),
+        gender,
         pronouns: pronouns.trim(),
         schoolLevel,
         majors: majors.map((m) => m.trim()),
@@ -194,28 +206,30 @@ export default function EditProfileScreen() {
             onClose={() => setShowBirthdayPicker(false)}
           />
 
-          <Text style={styles.fieldLabel}>Sex assigned at birth</Text>
-          <SegmentedControl
-            options={SEX_AT_BIRTH_OPTIONS}
-            value={sexAtBirth}
-            onChange={setSexAtBirth}
-          />
-          {errors.sexAtBirth ? <Text style={styles.errorText}>{errors.sexAtBirth}</Text> : null}
-
           <Text style={styles.fieldLabel}>Gender</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Gender"
-            placeholderTextColor="#888"
-            value={gender}
-            onChangeText={setGender}
+          <Text style={[styles.hintText, { marginTop: 0 }]}>
+            Shown on your profile and to chapter admins.
+          </Text>
+          <SegmentedControl
+            options={GENDER_OPTIONS}
+            value={genderOption}
+            onChange={setGenderOption}
           />
+          {genderOption === 'Self-describe' ? (
+            <TextInput
+              style={styles.input}
+              placeholder="Tell us how you identify"
+              placeholderTextColor="#888"
+              value={genderSelfDescribe}
+              onChangeText={setGenderSelfDescribe}
+            />
+          ) : null}
           {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
 
           <Text style={styles.fieldLabel}>Pronouns (optional)</Text>
           <TextInput
             style={styles.input}
-            placeholder="Pronouns"
+            placeholder="e.g. she/her, he/him, they/them"
             placeholderTextColor="#888"
             value={pronouns}
             onChangeText={setPronouns}
@@ -354,6 +368,12 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 13,
     marginTop: -6,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  hintText: {
+    color: '#999',
+    fontSize: 13,
     marginBottom: 10,
     marginLeft: 4,
   },

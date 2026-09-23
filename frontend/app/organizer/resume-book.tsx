@@ -1,3 +1,8 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { getDownloadURL, ref } from 'firebase/storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,18 +15,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { getDownloadURL, ref } from 'firebase/storage';
-import * as WebBrowser from 'expo-web-browser';
-import { db, storage } from '../../firebaseConfig';
-import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
 import { colors, fontSize, radius, spacing } from '../../components/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { db, storage } from '../../firebaseConfig';
+import { isResumeStale, resumeStoragePath, type ResumeDoc } from '../../types/resume';
 import { displayName, formatGradTerm, type UserProfile } from '../../types/user';
 import { formatEventDate } from '../../utils/date';
-import { isResumeStale, resumeStoragePath, type ResumeDoc } from '../../types/resume';
 
 type Row = ResumeDoc & { id: string; user: UserProfile | undefined; name: string; email: string };
 
@@ -177,7 +177,7 @@ export default function ResumeBookScreen() {
         ) : null}
       </View>
       <Text style={styles.exportNote}>
-        CSV has names, majors, graduation, seeking and work-auth — not the resume files.
+        CSV has names, majors, graduation, seeking and work-auth information, and appropriate resume file names.
       </Text>
 
       {loading ? (

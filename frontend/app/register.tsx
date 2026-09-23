@@ -1,31 +1,31 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
-import { isChapterEmail, CHAPTER_EMAIL_LABEL } from '../utils/validation';
-import { SegmentedControl } from '../components/SegmentedControl';
 import { DateSelect } from '../components/DateSelect';
 import { MajorSelect, OTHER } from '../components/MajorSelect';
-import { calculateAge, formatDateInput } from '../utils/date';
+import { SegmentedControl } from '../components/SegmentedControl';
 import { colors } from '../components/theme';
+import { useAuth } from '../contexts/AuthContext';
 import {
+  GENDER_OPTIONS,
   MAJOR_OPTIONS,
   SCHOOL_LEVEL_OPTIONS,
-  SEX_AT_BIRTH_OPTIONS,
+  type GenderOption,
   type SchoolLevel,
-  type SexAtBirth,
 } from '../types/user';
+import { calculateAge, formatDateInput } from '../utils/date';
+import { CHAPTER_EMAIL_LABEL, isChapterEmail } from '../utils/validation';
 
 const PASSWORD_HINT = 'At least 8 characters, with a letter and a number.';
 const isStrongPassword = (pw: string) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(pw);
@@ -38,7 +38,6 @@ type FieldErrors = Partial<
     | 'password'
     | 'confirmPassword'
     | 'birthday'
-    | 'sexAtBirth'
     | 'gender'
     | 'schoolLevel'
     | 'majors',
@@ -54,8 +53,8 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [birthday, setBirthday] = useState('');
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
-  const [sexAtBirth, setSexAtBirth] = useState<SexAtBirth | undefined>();
-  const [gender, setGender] = useState('');
+  const [genderOption, setGenderOption] = useState<GenderOption | undefined>();
+  const [genderSelfDescribe, setGenderSelfDescribe] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [schoolLevel, setSchoolLevel] = useState<SchoolLevel | undefined>();
   const [majors, setMajors] = useState<string[]>([]);
@@ -112,8 +111,10 @@ export default function RegisterScreen() {
       if (age == null || age < 13 || age > 120) next.birthday = 'That birthday looks wrong.';
     }
 
-    if (!sexAtBirth) next.sexAtBirth = 'Select one.';
-    if (!gender.trim()) next.gender = 'Enter your gender.';
+    if (!genderOption) next.gender = 'Select one.';
+    else if (genderOption === 'Self-describe' && !genderSelfDescribe.trim()) {
+      next.gender = 'Tell us how you identify, or choose another option.';
+    }
     if (!schoolLevel) next.schoolLevel = 'Select one.';
 
     if (majors.length === 0) next.majors = 'Add at least one major.';
@@ -130,12 +131,13 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
+      const gender =
+        genderOption === 'Self-describe' ? genderSelfDescribe.trim() : genderOption!;
       await register(email, password, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         birthday,
-        sexAtBirth: sexAtBirth!,
-        gender: gender.trim(),
+        gender,
         pronouns: pronouns.trim(),
         schoolLevel: schoolLevel!,
         majors: majors.map((m) => m.trim()),
@@ -171,7 +173,7 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join SHPE Northwestern</Text>
+        <Text style={styles.subtitle}>Join Northwestern SHPE</Text>
 
         <Text style={styles.sectionLabel}>Account</Text>
         <TextInput
@@ -246,26 +248,29 @@ export default function RegisterScreen() {
           onClose={() => setShowBirthdayPicker(false)}
         />
 
-        <Text style={styles.fieldLabel}>Sex assigned at birth</Text>
+        <Text style={styles.fieldLabel}>Gender</Text>
+        <Text style={[styles.hintText, { marginTop: 0 }]}>
+          Shown on your private profile and to chapter admins.
+        </Text>
         <SegmentedControl
-          options={SEX_AT_BIRTH_OPTIONS}
-          value={sexAtBirth}
-          onChange={setSexAtBirth}
+          options={GENDER_OPTIONS}
+          value={genderOption}
+          onChange={setGenderOption}
         />
-        {errors.sexAtBirth ? <Text style={styles.errorText}>{errors.sexAtBirth}</Text> : null}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Gender"
-          placeholderTextColor="#888"
-          value={gender}
-          onChangeText={setGender}
-        />
+        {genderOption === 'Self-describe' ? (
+          <TextInput
+            style={styles.input}
+            placeholder="Tell us how you identify"
+            placeholderTextColor="#888"
+            value={genderSelfDescribe}
+            onChangeText={setGenderSelfDescribe}
+          />
+        ) : null}
         {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
 
         <TextInput
           style={styles.input}
-          placeholder="Pronouns (optional)"
+          placeholder="Pronouns (e.g. she/her, he/him, they/them) (optional)"
           placeholderTextColor="#888"
           value={pronouns}
           onChangeText={setPronouns}

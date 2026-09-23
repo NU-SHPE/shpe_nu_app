@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { useAuth } from '../../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PageHeader } from '../../components/PageHeader';
-import { formatRelativeTime } from '../../utils/date';
 import { colors } from '../../components/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../firebaseConfig';
+import { formatRelativeTime } from '../../utils/date';
 
 function ActionButton({ icon, label, onPress } : { icon: any; label: string; onPress?: () => void }) {
   return (
@@ -49,7 +49,7 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <PageHeader
-        title="SHPE App"
+        title="Northwestern SHPE"
         subtitle={`Welcome back, ${profile?.firstName || 'Member'}!`}
       />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>

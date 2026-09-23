@@ -1,11 +1,10 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { PageHeader } from '../../components/PageHeader';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '../../components/ActionButton';
-import { colors } from '../../components/theme';
+import { PageHeader } from '../../components/PageHeader';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Officer tools hub — just the entry points. Event management (QR codes, edit,
@@ -34,7 +33,7 @@ export default function OrganizerScreen() {
     <View style={styles.container}>
       <PageHeader
         title="Organizer"
-        subtitle="Create events and announcements — manage an event from its own page"
+        subtitle="Create events, announcements, and manage users!"
       />
 
       <ScrollView contentContainerStyle={styles.content}>

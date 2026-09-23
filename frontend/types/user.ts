@@ -1,7 +1,12 @@
 import type { Timestamp, FieldValue } from 'firebase/firestore';
 
-export const SEX_AT_BIRTH_OPTIONS = ['Male', 'Female'] as const;
-export type SexAtBirth = (typeof SEX_AT_BIRTH_OPTIONS)[number];
+// No separate "sex assigned at birth" question — nothing in the app uses it
+// (it was only ever displayed, never read for logic), so per the
+// gender-inclusive-forms principle of not collecting data you don't have a
+// use for, gender is the only identity field. "Self-describe" (not "Other")
+// pairs with a free-text field so it doesn't read as dismissive.
+export const GENDER_OPTIONS = ['Male', 'Female', 'Self-describe', 'Prefer not to say'] as const;
+export type GenderOption = (typeof GENDER_OPTIONS)[number];
 
 export const SCHOOL_LEVEL_OPTIONS = [
   'Freshman',
@@ -78,7 +83,7 @@ export interface UserProfileInput {
   lastName: string;
   /** `YYYY-MM-DD`. Use `calculateAge()` from `utils/date.ts` to derive age. */
   birthday: string;
-  sexAtBirth: SexAtBirth;
+  /** One of GENDER_OPTIONS, or free text when that was "Self-describe". */
   gender: string;
   /** Self-described, optional — stored as '' when not provided. */
   pronouns: string;

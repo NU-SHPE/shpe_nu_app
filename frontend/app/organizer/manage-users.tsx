@@ -255,7 +255,6 @@ export default function ManageUsersScreen() {
                     {[
                       ['Email', selectedUser.email],
                       ['Age', selectedAge != null ? String(selectedAge) : '—'],
-                      ['Sex assigned at birth', selectedUser.sexAtBirth ?? '—'],
                       ['Gender', selectedUser.gender || '—'],
                       ['Pronouns', selectedUser.pronouns || '—'],
                       ['School level', selectedUser.schoolLevel ?? '—'],

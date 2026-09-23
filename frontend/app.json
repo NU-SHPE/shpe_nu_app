@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SHPE App",
+    "name": "Northwestern SHPE",
     "slug": "shpe-nu-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,7 +27,7 @@
       ]
     },
     "web": {
-      "name": "SHPE App",
+      "name": "Northwestern SHPE",
       "shortName": "SHPE",
       "output": "single",
       "favicon": "./assets/images/nu-shpe-favicon.png"
@@ -37,7 +37,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SHPE App to access your camera to check in to events."
+          "cameraPermission": "Allow Northwestern SHPE to access your camera to check in to events."
         }
       ],
       [
