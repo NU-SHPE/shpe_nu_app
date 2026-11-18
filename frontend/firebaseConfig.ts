@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import type { Analytics } from 'firebase/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -12,6 +13,7 @@ const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -40,3 +42,35 @@ export const db = getFirestore(app);
 // (this project's bucket is the newer `.firebasestorage.app` kind, which has
 // no Spark free tier); usage stays inside the free allowance at chapter scale.
 export const storage = getStorage(app);
+
+/**
+ * Google Analytics (via Firebase) — web only. The JS SDK's Analytics doesn't
+ * run on React Native, so native builds get null. require() keeps the module
+ * out of the native bundle entirely, same reasoning as nativePersistence above.
+ * isSupported() returns false in browsers that block it (cookies off, some
+ * privacy modes); ad blockers can still drop the requests, so numbers
+ * undercount. Skipped when there's no measurementId (CI, local without it).
+ *
+ * Page views — including in-app route changes — are tracked automatically by
+ * GA4's enhanced measurement (it listens for history changes), so there's no
+ * manual screen_view logging; adding it would double-count.
+ */
+export const analytics: Promise<Analytics | null> =
+  Platform.OS === 'web' && firebaseConfig.measurementId
+    ? (async () => {
+        const { getAnalytics, isSupported } =
+          require('firebase/analytics') as typeof import('firebase/analytics');
+        return (await isSupported()) ? getAnalytics(app) : null;
+      })().catch(() => null)
+    : Promise.resolve(null);
+
+/** Log a custom Analytics event. A no-op on native or when Analytics is unavailable. */
+export async function logAnalyticsEvent(
+  name: string,
+  params?: Record<string, string | number | boolean>,
+): Promise<void> {
+  const instance = await analytics;
+  if (!instance) return;
+  const { logEvent } = require('firebase/analytics') as typeof import('firebase/analytics');
+  logEvent(instance, name, params);
+}

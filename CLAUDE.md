@@ -126,6 +126,11 @@ ships as a real file at `/privacy-policy.html`.
   newer `.firebasestorage.app` kind with no Spark free tier. Usage stays well
   inside Blaze's free allowance at chapter scale (~$0/mo); a Cloud Billing
   budget alert is the safety net. Still no server — Storage is client-SDK only.
+- **Analytics is web-only** (`analytics` / `logAnalyticsEvent` in
+  `firebaseConfig.ts`), keyed by `EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID`. The JS
+  SDK's Analytics doesn't run on React Native; native would need
+  `@react-native-firebase/analytics` + a dev build. Page views are automatic
+  (GA4 enhanced measurement), so don't log `screen_view` by hand.
 
 ### Password reset from Profile
 
