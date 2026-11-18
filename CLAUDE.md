@@ -393,12 +393,19 @@ through screens.
 
 ## Environment
 
-Windows / PowerShell:
+macOS / zsh (Node via nvm).
 
-- No `&&` chaining — use `;` or separate lines
-- `rm -rf x` → `Remove-Item -Recurse -Force x`
-- If npm tools fail with "running scripts is disabled", use `npx.cmd` or run
-  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+- The repo path contains spaces (`SHPE UIC App/shpe-web-app`) — quote paths
+  in shell commands.
+- zsh expands unquoted globs and errors on no match: quote patterns like
+  `--include='*.ts'` and paths containing `(tabs)` or `[id]`.
+- `shpe-web-app` is the only git repo. `frontend/` is a plain folder inside
+  it — there must be no `frontend/.git` (a stale nested one from the UIC days
+  was removed; if one reappears, git commands run inside `frontend/` would hit
+  the wrong repo).
+- The Firebase Admin service-account key lives outside the repo at
+  `~/.config/shpe/serviceAccountKey.json` (point admin scripts at it with
+  `GOOGLE_APPLICATION_CREDENTIALS`). Never put it back inside the project.
 
 ---
 
