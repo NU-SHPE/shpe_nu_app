@@ -15,7 +15,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../../components/Card';
-import { db } from '../../../firebaseConfig';
+import { db, logAnalyticsEvent } from '../../../firebaseConfig';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatEventDate, formatTimeRange, isEventPast, toDate } from '../../../utils/date';
 import { PageHeader } from '../../../components/PageHeader';
@@ -121,12 +121,14 @@ export default function EventInfo() {
       const rsvpRef = doc(db, 'rsvps', `${user.uid}_${id}`);
       if (rsvped) {
         await deleteDoc(rsvpRef);
+        void logAnalyticsEvent('rsvp_cancel', { event_id: id });
       } else {
         await setDoc(rsvpRef, {
           userId: user.uid,
           eventId: id,
           rsvpedAt: serverTimestamp(),
         });
+        void logAnalyticsEvent('rsvp', { event_id: id });
       }
     } catch (error) {
       console.error('Error updating RSVP:', error);

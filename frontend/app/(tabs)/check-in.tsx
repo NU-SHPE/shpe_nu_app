@@ -10,7 +10,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics'; //For vibration on phone for the scan
-import { db } from '../../firebaseConfig';
+import { db, logAnalyticsEvent } from '../../firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
 import { PageHeader } from '../../components/PageHeader';
 import { WebQRScanner } from '../../components/WebQRScanner';
@@ -130,6 +130,11 @@ export default function CheckInScreen() {
 
       const eventTitle =
         typeof eventData?.title === 'string' ? eventData.title : 'Event';
+      // Event id + category only — nothing that identifies the member.
+      const analyticsParams = {
+        event_id: eventId,
+        event_category: typeof eventData?.category === 'string' ? eventData.category : 'unknown',
+      };
 
       const checkInRef = doc(db, 'checkIns', `${user.uid}_${eventId}`);
       const existing = await getDoc(checkInRef);
@@ -152,6 +157,7 @@ export default function CheckInScreen() {
           { merge: true },
         );
 
+        void logAnalyticsEvent('check_in', analyticsParams);
         showResult('success', 'Checked in', eventTitle);
       } else {
         if (existingData?.checkedOutAt) {
@@ -170,6 +176,7 @@ export default function CheckInScreen() {
           { merge: true },
         );
 
+        void logAnalyticsEvent('check_out', analyticsParams);
         showResult('success', 'Checked out', eventTitle);
       }
     } catch (err) {

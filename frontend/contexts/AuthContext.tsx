@@ -12,7 +12,7 @@ import {
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { auth, db } from '../firebaseConfig';
+import { auth, db, logAnalyticsEvent } from '../firebaseConfig';
 import type { UserProfile, UserProfileInput } from '../types/user';
 
 // How a notification behaves if it arrives while the app is open.
@@ -144,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email.trim(), password);
+    void logAnalyticsEvent('login', { method: 'email' });
   };
 
   const register = async (
@@ -164,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isExec: false,
       createdAt: serverTimestamp(),
     });
+    void logAnalyticsEvent('sign_up', { method: 'email' });
     await sendEmailVerification(credential.user);
   };
 
